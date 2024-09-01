@@ -79,8 +79,8 @@ import polars as pl
 
 ```{python}
 # Show version of Polars
-# Uncomment line below to check version of Polars installed/updated
-#pl.show_versions()
+# Uncomment line below to check version of Polars
+pl.show_versions()
 ```
 
 <br>
@@ -103,8 +103,8 @@ Once we've had the file ready, it would be read via the usual read_csv() method.
 
 ```{python}
 df = pl.read_csv("chembl_mols.csv")
-df.head() #read first 5 rows
-#df #read full dataset
+df.head()
+#df 
 ```
 
 <br>
@@ -120,9 +120,8 @@ Now, since this dataset was downloaded as a .csv file, this meant it was likely 
 # *please note this has been updated to "separator" 
 # due to updates in Polars since the published date of this post
 df = pl.read_csv("chembl_mols.csv", separator = ";")
-# Show the first 10 rows of data
+
 #df.head(10)
-# or full dataset
 df
 ```
 
@@ -130,11 +129,47 @@ df
 df.group_by("Type").len()
 ```
 
+df is further reduced in size by restricting to only small molecules.
+
 ```{python}
-# Select only "Type" = "Small molecule"
+df_sm = df.filter((pl.col("Type") == "Small molecule"))
+df_sm #1,920,366 entries
+```
+
+```{python}
+# df_sm.group_by("Structure Type").len()
+```
+
+There are 5485 entries with "NONE" as "Structure Type" which mean unknown compound structures or not recorded in either compound_structures table or protein_therapeutics table - will try to remove them from df_sm first.
+
+```{python}
+# Check "Inorganic Flag" if 1 meaning inorganic
+df_sm.group_by("Inorganic Flag").len()
+
+# 12,932 as "0" - unassigned inorganic flag
+# 130 as "1" - inorganics
+```
+
+```{python}
+# Reducing file size by filtering out 
+# non-small molecules & structure type of "NONE"
 # then try the default write_parquet() with comp level = 22
 
+df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE"))
 
+df_sm #1,914,881 entries
+```
+
+```{python}
+# Check "NONE" entries are removed/filtered
+df_sm.group_by("Structure Type").len()
+```
+
+```{python}
+# Adding in inorganic flag
+df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE") & (pl.col("Inorganic Flag") == -1 ))
+
+df_sm #1,901,819 entries
 ```
 
 ```{python}
@@ -143,26 +178,28 @@ from pathlib import Path
 
 ```{python}
 # Convert df into parquet file
-# path = Path.cwd() / "chembl_mols.parquet"
-# df.write_parquet(path, compression_level=22)
+path = Path.cwd() / "chembl_sm_mols.parquet"
+df_sm.write_parquet(path, compression_level=22)
 
-# Check parquet file size
-# file size when comp level at 22 = 122.1MB
-```
+## Check parquet file size
+# file size when comp level at 22 = 122.1MB (original ~2 million entries)
 
-```{python}
-df.head()
+# file size when comp level at 22 = 100.8MB when file restricted by "Type" == "Small molecule" (1,920,366 entries)
+
+# file size when comp level at 22 = 100.4MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" (1,914,881 entries)
+
+# file size when comp level at 22 = 98.9MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" & "Inorganic Flag" == -1 (1,901,819 entries entries)
 ```
 
 ```{python}
 # try using use_pyarrow & pyarrow_options to partition datasets
 
-path = Path.cwd() / "chembl_mols_type_part_obj"
-df.write_parquet(
-    path,
-    use_pyarrow=True,
-    pyarrow_options={"partition_cols": ["Type"]},
-)
+# path = Path.cwd() / "chembl_mols_type_part_obj"
+# df.write_parquet(
+#     path,
+#     use_pyarrow=True,
+#     pyarrow_options={"partition_cols": ["Type"]},
+# )
 
 ## when comp level as default (not specified)
 # file sizes for max phase 1, 2, 3, 4 are all < 100MB
