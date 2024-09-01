@@ -176,7 +176,7 @@ df_sm #1,901,819 entries
 from pathlib import Path
 ```
 
-```{python}
+```{{python}}
 # Convert df into parquet file
 path = Path.cwd() / "chembl_sm_mols.parquet"
 df_sm.write_parquet(path, compression_level=22)
@@ -188,7 +188,7 @@ df_sm.write_parquet(path, compression_level=22)
 
 # file size when comp level at 22 = 100.4MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" (1,914,881 entries)
 
-# file size when comp level at 22 = 98.9MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" & "Inorganic Flag" == -1 (1,901,819 entries entries)
+# file size when comp level at 22 = 98.9MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" & "Inorganic Flag" == -1 (1,901,819 entries)
 ```
 
 ```{python}
@@ -212,4 +212,12 @@ df_sm.write_parquet(path, compression_level=22)
 # 3 files created for each max phase category of similar size as mentioned previously
 
 ## If using "Type" as partition column - "Small molecule" parquet file size = 134.3MB
+```
+
+Reading parquet file saved from dataframe above.
+
+```{python}
+df_pa = pl.read_parquet("chembl_sm_mols.parquet")
+
+df_pa
 ```
