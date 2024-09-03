@@ -1,0 +1,307 @@
+---
+title: Small molecules in ChEMBL database
+subtitle: Series 1.1.2 - Exploratory data analysis and preprocessing in Polars dataframe library
+author: Jennifer HY Lin
+date: '2023-1-4'
+date-modified: last-modified
+draft: true
+categories:
+  - Machine learning projects
+  - Polars
+  - Python
+  - Jupyter
+  - ChEMBL database
+  - Cheminformatics
+jupyter: python3
+---
+
+**Plan**
+
+* Try to see if Polars can be used with sklearn completely for building ML model
+
+<br>
+
+```{python}
+# read parquet files as df
+
+```
+
+**The following needs to be updated & splitted into smaller posts/qmds**
+
+Initially, I only wanted to download around 24 compounds from the ChEMBL database first. Unknowingly, I ended up downloading the whole curated set of 2,331,700 small molecules (!), and I found this out when I loaded the dataframe after setting up the delimiter for the csv file, which later led to the file size problem mentioned earlier.
+
+Loading these 2,331,700 rows of data was fast, which occurred within a few seconds without exaggeration. This echoed many users' experiences with Polars, so this was another nice surprise, and once again confirmed that Rust, and also Apache arrow, which was used as Polars' foundation, were solid in speed.
+
+Now I had the full dataframe, and I wanted to find out what types of physicochemical properties were there for the compounds.
+
+```{python}
+# Print all column names and data types 
+print(df.glimpse())
+```
+
+There were a few terms where I wasn't sure of their exact meanings, so I went through the ChEMBL_31 schema documentation and ChEMBL database website to find out. This took a while and was an important step to take so that I would know what to do when reaching the ML phase.
+
+I have selected a few physicochemical properties down below so that readers and I could gather some reasonable understandings for each term. The explanations for each term were adapted from ChEMBL_31 schema documentation (available as "Release notes" on the website), or if definitions for certain terms were not available from the documentation, I resorted to interpret them myself by going into "Dinstict compounds" section on the ChEMBL database, where I would click on, e.g. bioactivities, for a random compound in there to see what results showed up and then described them below.
+
+The definitions for some of the listed physicochemical properties were:
+
+**Max Phase** - Maximum phase of development reached for the compound (where 4 = approved). Null was where max phase has not yet been assigned.
+
+**Bioactivities** - Various biological assays used for the compounds e.g. IC~50~, GI~50~, potency tests etc.
+
+**AlogP** - Calculated partition coefficient
+
+**HBA** - Number of hydrogen bond acceptors
+
+**HBD** - Number of hydrogen bond donors
+
+**#RO5 Violations** - Number of violations of Lipinski's rule-of-five, using HBA and HBD definitions
+
+**Passes Ro3** - Indicated whether the compound passed the rule-of-three (MW \< 300, logP \< 3 etc)
+
+**QED Weighted** - Weighted quantitative estimate of drug likeness (as defined by Bickerton *et al.*, Nature Chem 2012)
+
+**Inorganic flag** - Indicated whether the molecule was inorganic (i.e., containing only metal atoms and \<2 carbon atoms), where 1 = inorganic compound and -1 = not inorganic compound (assuming 0 meant it was neither case or yet to be assigned)
+
+**Heavy Atoms** - Number of heavy (non-hydrogen) atoms
+
+**CX Acidic pKa** - The most acidic pKa calculated using ChemAxon v17.29.0
+
+**CX Basic pKa** - The most basic pKa calculated using ChemAxon v17.29.0
+
+**CX LogP** - The calculated octanol/water partition coefficient using ChemAxon v17.29.0
+
+**CX LogD** - The calculated octanol/water distribution coefficient at pH = 7.4 using ChemAxon v17.29.0
+
+**Structure Type** - based on compound_structures table, where SEQ indicated an entry in the protein_therapeutics table instead, NONE indicated an entry in neither tables, e.g. structure unknown
+
+**Inchi Key** - the IUPAC international chemical identifier key
+
+From the df.glimpse() method previously, there were a lot of columns with the data type of "Utf8", which meant they were strings. There were only two columns that had "Int64", which meant they were integers. A lot of these columns were actually storing numbers as strings. So to make my life easier, I went on to convert these data types into the more appropriate ones for selected columns.
+
+```{python}
+# Convert data types for multiple selected columns
+# Note: only takes two positional arguments, 
+# so needed to use [] in code to allow more than two
+
+# Multiple columns all at once - with_columns()
+# *Single column - with_column() 
+# *this only worked at the time of writing the post (around published date), 
+# this is not going to work currently as Polars has been updated, 
+# please use with_columns() for single or multiple columns instead*
+
+# Use alias if wanting to keep original data type in column, 
+# as it adds a new column under an alias name to dataframe
+df_new = df.with_columns(
+    [
+        (pl.col("Molecular Weight")).cast(pl.Float64, strict = False),
+        (pl.col("Targets")).cast(pl.Int64, strict = False),
+        (pl.col("Bioactivities")).cast(pl.Int64, strict = False),
+        (pl.col("AlogP")).cast(pl.Float64, strict = False),
+        (pl.col("Polar Surface Area")).cast(pl.Float64, strict = False),
+        (pl.col("HBA")).cast(pl.Int64, strict = False),
+        (pl.col("HBD")).cast(pl.Int64, strict = False),
+        (pl.col("#RO5 Violations")).cast(pl.Int64, strict = False),
+        (pl.col("#Rotatable Bonds")).cast(pl.Int64, strict = False),
+        (pl.col("QED Weighted")).cast(pl.Float64, strict = False),
+        (pl.col("CX Acidic pKa")).cast(pl.Float64, strict = False),
+        (pl.col("CX Basic pKa")).cast(pl.Float64, strict = False),
+        (pl.col("CX LogP")).cast(pl.Float64, strict = False),
+        (pl.col("CX LogD")).cast(pl.Float64, strict = False),
+        (pl.col("Aromatic Rings")).cast(pl.Int64, strict = False),
+        (pl.col("Heavy Atoms")).cast(pl.Int64, strict = False),
+        (pl.col("HBA (Lipinski)")).cast(pl.Int64, strict = False),
+        (pl.col("HBD (Lipinski)")).cast(pl.Int64, strict = False),
+        (pl.col("#RO5 Violations (Lipinski)")).cast(pl.Int64, strict = False),
+        (pl.col("Molecular Weight (Monoisotopic)")).cast(pl.Float64, strict = False)
+    ]
+)
+df_new.head()
+```
+
+Once all the columns' data types have been checked and converted to appropriate types accordingly, I used null_count() to see the distributions of all null entries in the dataset.
+
+```{python}
+# Check for any null or NA or "" entries in the dataset
+# Alternative code that worked similarly was df.select(pl.all().null_count())
+df_new.null_count()
+```
+
+```{python}
+# Drop rows with null entries
+df_dn = df_new.drop_nulls()
+df_dn 
+# Number of rows reduced to 736,570
+```
+
+```{python}
+# Check that all rows with null values were dropped
+df_dn.null_count()
+```
+
+```{python}
+# To see summary statistics for df_dn dataset
+df_dn.describe()
+```
+
+<br>
+
+##### **Some exploratory data analysis**
+
+One of the columns that jumped out from the summary statistics of the df_dn dataset was the "Targets" column. It ranged from 1 to 1334 targets. Out of curiosity, I went through several places on ChEMBL website to find out the exact definition of "Target". Eventually I settled on an answer which explained that the "Target" column represented the number of targets associated with the particular ChEMBL compound listed. I then singled out the ChEMBL compound with 1334 targets recorded, it turned out to be imatinib, which was marketed as Gleevec, and was a well-known prescription medicine for leukaemia and other selected oncological disorders with many well-documented drug interactions.
+
+```{python}
+# This was confirmed via a filter function, which brought up CHEMBL1421, or also known as dasatinib
+df_dn.filter(pl.col("Targets") == 1334)
+```
+
+To explore other physicochemical and molecular properties in the dataframe, "Max Phase" was one of the first few that drew my interests. So it tagged each ChEMBL compound with a max phase number from 0 to 4, where 4 meant the compound was approved (usually also meant it was already a prescription medicine). Thinking along this line, I thought what about those compounds that had max phase as 0, because they were the ones still pending associations with max phase numbers. By extending on this idea, this could be a good opportunity to introduce some ML to predict whether these zero max phase compounds would enter the approved max phase.
+
+Firstly, I had a look at the overall distribution of the max phase compounds in this dataframe df_dn.
+
+```{python}
+# Interested in what types of "Max Phase" were recorded 
+# for the curated small molecules in ChEMBL database
+df_dn.groupby("Max Phase", maintain_order = True).agg(pl.count())
+```
+
+A quick groupby function showed that there were only 954 small molecules approved. Phase 3 recorded a total of 303 small molecules. For phase 2, there were 441 small molecules, followed by 239 compounds in phase 1. There were, however, a total amount of 734,633 small molecules that had zero as phase number (as per ChEMBL_31 schema documentation). Note: these figures were only for ChEMBL compounds with full documentations in the dataset (excluding entries or compounds with N/A or "" (empty) string cells).
+
+One of the other parameters I was interested in was "QED Weighted". So I went further into understanding what it meant, as the original reference was conveniently provided in the ChEMBL_31 schema documentation. The reference paper was by [Bickerton, G., Paolini, G., Besnard, J. et al. Quantifying the chemical beauty of drugs. Nature Chem 4, 90--98 (2012)](https://doi.org/10.1038/nchem.1243) (note: author's manuscript was available to view via PubMed link, the Nature Chemistry link only provided abstract with access to article via other means as stated).
+
+In short, it was a measure of druglikeness for small molecules based on the concept of desirability, which was based on a total of 8 different molecular properties. These molecular properties included molecular weight, ALogP, polar surface area, number of hydrogen bond acceptors, number of hydrogen bond donors, number of rotatable bonds, number of aromatic rings and structural alerts. Without going into too much details for this QED Weighted parameter, it was normally recorded as a number that ranged from 0 to 1, with 0 being the least druglike and 1 being the most druglike.
+
+<br>
+
+##### **Prepare dataframe prior to running machine learning model**
+
+Before I got too carried away with further EDA, I wanted to get started on preparing a dataframe for the ML model. A rough plan at this stage was to filter out Max Phase 4 and 0 compounds. Max phase 0 compounds were the ones that were not assigned with any max phase numbers yet, so they would be ideal for use as the testing set. Another main idea was to use "Max Phase" parameter as the target y variable for a LR model, because ultimately stakeholders would be more interested in knowing which candidate compounds had the most likely chance to reach the final approved phase during a drug discovery and development project or otherwise. This would also provide a chance to potentially reduce the amount of resources and time required in such a complex and sophisticated matter.
+
+The goal of this ML model was to answer this question: which physicochemical parameters would be the most suitable ones to predict whether a compound would enter max phase 4 (approved) or not? (implicitly, this might also help to predict which max phase 0 compounds would likely enter max phase 4 in the end)
+
+I've then narrowed down the df_dn dataset to fulfill the following criteria:
+
+-   Only small molecules present
+-   Max phase of 0 and 4 only
+
+Another reason behind choosing only small molecules that had max phase of 0 and 4 was that a confusion matrix could be built in the end to see if the parameters selected would give us a reasonably good model for predicting the outcomes of these small molecules.
+
+For now, I've chosen the following columns (or physicochemical parameters) to appear in the interim df_0 and df_4 datasets.
+
+```{python}
+# Selecting Max phase 0 small molecules with desired parameters
+df_0 = df_dn.filter(
+    (pl.col("Type") == "Small molecule") &
+    (pl.col("Max Phase") == 0)
+).select(["ChEMBL ID", 
+          "Type", 
+          "Max Phase",
+          "#RO5 Violations", 
+          "QED Weighted", 
+          "CX LogP", 
+          "CX LogD", 
+          "Heavy Atoms"]
+        )
+df_0
+```
+
+```{python}
+# Selecting Max phase 4 small molecules with desired parameters
+df_4 = df_dn.filter(
+    (pl.col("Type") == "Small molecule") &
+    (pl.col("Max Phase") == 4)
+).select(["ChEMBL ID", 
+          "Type", 
+          "Max Phase",
+          "#RO5 Violations", 
+          "QED Weighted", 
+          "CX LogP", 
+          "CX LogD", 
+          "Heavy Atoms"]
+        )
+df_4
+```
+
+<br>
+
+###### **Re-sampling via under-sampling**
+
+Because of the large number of Max Phase 0 compounds present in the original dataset, I've randomly sampled about 950 small molecules from this group, so that there were similar amount of data in each group to avoid having an imbalanced dataset.
+
+```{python}
+df_s_0 = df_0.sample(n = 950, shuffle = True, seed = 0)
+df_s_0
+```
+
+Since the plan was to use LR method for ML model, the y variable I was interested in was going to be a binary categorical variable - meaning it needed to be 0 (not approved) or 1 (approved). To do this, I've added a new column with a new name of "Max_Phase" and replace "4" as "1" by dividing the whole column by 4 to reach this new label.
+
+```{python}
+df_4_f = df_4.with_columns((pl.col("Max Phase") / 4).alias("Max_Phase"))
+df_4_f
+```
+
+Then I changed the data type of "Max_Phase" from float to integer, so that the two different dataframes could be concatenated (which would only work if both were of same data types).
+
+```{python}
+df_4_f = df_4_f.with_columns((pl.col("Max_Phase")).cast(pl.Int64, strict = False))
+df_4_f
+```
+
+Also I've created a new column with the same name of "Max_Phase" for Max phase 0 small molecules, so that the two dataframes could be combined (also needed to have exactly the same column names for it to work).
+
+```{python}
+df_s_0_f = df_s_0.with_columns((pl.col("Max Phase")).alias("Max_Phase"))
+df_s_0_f
+```
+
+Then I combined df_s\_0_f (dataframe with max phase 0 compounds) and df_4\_f (dataframe with max phase 4 compounds).
+
+```{python}
+df_concat = pl.concat([df_s_0_f, df_4_f], how = "vertical",)
+print(df_concat)
+```
+
+This df_concat dataset was checked to see it had all compounds in Max Phase 0 and 4 only. Note: Max Phase 4 (approved) compounds were re-labelled as Max_Phase = 1.
+
+```{python}
+df_concat.groupby("Max_Phase").count()
+```
+
+I then checked df_concat dataset only had small molecules to confirm what I've tried to achieve.
+
+```{python}
+df_concat.groupby("Type").count()
+```
+
+So here we had the final version of the dataset, which I've renamed to df_ml to avoid confusion from the previous dataframes, before entering the ML phase.
+
+```{python}
+# Leave out ChEMBL ID and Type
+df_ml = df_concat.select(["Max_Phase", 
+                          "#RO5 Violations", 
+                          "QED Weighted", 
+                          "CX LogP", 
+                          "CX LogD", 
+                          "Heavy Atoms"]
+                        )
+df_ml
+```
+
+```{python}
+# Check for any nulls in the dataset
+df_ml.null_count()
+```
+
+```{python}
+# Check data types in df_ml dataset
+# Needed to be integers or floats for scikit-learn algorithms to work
+df_ml.dtypes
+```
+
+``` {{python}}
+# Note: exported df_ml dataframe as csv file for ML series 1.2.
+df_ml.write_csv("df_ml.csv", sep = ",")
+```
+
+<br>
+

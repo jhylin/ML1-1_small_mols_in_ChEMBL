@@ -75,7 +75,6 @@ I'm reading the .csv file first to have an overall look at the data.
 ```{python}
 df = pl.read_csv("chembl_mols.csv")
 df.head()
-#df 
 ```
 
 <br>
@@ -86,8 +85,7 @@ A .csv file tends to be separated by delimiters e.g. commas, semicolons or tabs.
 
 ```{python}
 df = pl.read_csv("chembl_mols.csv", separator = ";")
-#df.head(10)
-df
+df.head()
 ```
 
 Below are a series of data checks and cleaning that'll reduce the original .csv file size (about 664.8MB) into something more manageable. My goal is to get a parquet file to be under 100MB which can then be uploaded to GitHub without using Git large file storage (well, this will be the last resort if this fails).
@@ -147,9 +145,10 @@ df_sm #1,901,819 entries
 
 The next step is to save the dataframe as a parquet file.
 
+Reference: [Apache Parquet documentations](https://parquet.apache.org/docs/)
+
 ```{{python}}
 from pathlib import Path
-
 path = Path.cwd() / "chembl_sm_mols.parquet"
 df_sm.write_parquet(path, compression_level=22)
 
@@ -162,6 +161,10 @@ df_sm.write_parquet(path, compression_level=22)
 
 # file size when comp level at 22 = 98.9MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" & "Inorganic Flag" == -1 (1,901,819 entries)
 ```
+
+***Table of file size changes (without using partitions & using partitions)***
+
+
 
 ```{python}
 # try using use_pyarrow & pyarrow_options to partition datasets
@@ -190,7 +193,6 @@ Finally, I'm reading the saved parquet file into a dataframe to see if it is wor
 
 ```{python}
 df_pa = pl.read_parquet("chembl_sm_mols.parquet")
-
 df_pa
 ```
 
