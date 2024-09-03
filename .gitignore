@@ -7,7 +7,9 @@ chembl_mols_part_obj
 chembl_mols_type_part_obj
 chembl_mols.parquet
 chembl_mols.csv
-
+ML1-1-1_chembl_cpds_parquet_files
+ML1-1-1_chembl_cpds_parquet.html
+ML1-1-1_chembl_cpds_parquet_files.html
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

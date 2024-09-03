@@ -16,6 +16,12 @@ categories:
 jupyter: python3
 ---
 
+**Plan**
+
+* Try to see if Polars can be used with sklearn completely for building ML model
+
+<br>
+
 ```{python}
 # read parquet files as df
 

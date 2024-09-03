@@ -1,0 +1,197 @@
+---
+title: Small molecules in ChEMBL database
+subtitle: Series 1.1.1 - Parquet file in Polars dataframe library 
+author: Jennifer HY Lin
+date: '2023-1-4'
+date-modified: last-modified
+draft: true
+categories:
+  - Machine learning projects
+  - Polars
+  - Python
+  - Jupyter
+  - ChEMBL database
+  - Cheminformatics
+jupyter: python3
+---
+
+##### **An attempt to revamp this post**
+
+*starting from 31/8/24*
+
+Why revamping this post?
+
+Three reasons for this: 
+
+1. ChEMBL file downloaded straight from website was way too large to be uploaded to GitHub (this was one of my very early posts with ChEMBL being completely new to me at the time so I downloaded the data from ChEMBL website without thinking too much, obviously there are currently other better and more reproducible ways to source ChEMBL data e.g. my more recent posts)
+
+    Note: GitHub blocks files larger than 100MB
+
+2. Polars seems to be a bit more integrated with sklearn now so I'm wondering if Polars can be used with sklearn wholly (i.e. not using Pandas at all)
+
+3. This post is one of my earlier less mature posts (bit embarrassing when I'm looking at it now) so I just want to see if I can improve it a little
+
+<br>
+
+##### **Previous post updates**
+
+*Latest update from 19th April 2024 - Polars is currently more integrated with Scikit-learn from version 1.4 (since January 2024), see this link re. [Polars output in set_output](https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_4_0.html#polars-output-in-set-output) for Polars dataframe outputs in Scikit-learn, and also a few other Polars enhancements from release [version 1.4 changelog](https://scikit-learn.org/dev/whats_new/v1.4.html#). I may attempt to update this series of posts in the future as they most probably won't need the conversion from Polars to Pandas dataframes anymore.*
+
+*Previous post update was on 16th August 2023 - some code updates only, please always refer to [Polars API reference](https://docs.pola.rs/py-polars/html/reference/index.html) documentations for most up-to-date code.*
+
+<br>
+
+##### **Background**
+
+This is the first part of the series of posts on building a logistic regression model by using *Scikit_learn* with [Polars dataframe library](https://docs.pola.rs/) (note: the older version of this post also uses Pandas). Polars is a blazingly fast dataframe library that is written completely in Rust with a very light Python binding that is available for use in Python or Rust programming language. Here I'll be using Python throughout all posts in the series. 
+
+This post will only focus on getting the small molecules data ready from ChEMBL database via a straight website download (not recommended if you're researching or doing virtual experiments that require a good level of data reproducibility, e.g. you'll need the version of data etc., this is however only a demonstration so I'll leave it as it is), and then convert the comma separated value (.csv) file into a parquet file (for better file compressions) in order to upload the data into GitHub. 
+
+<br>
+
+##### **Install and import Polars**
+
+```{python}
+# To install Polars dataframe library
+#!pip install polars
+
+# Update Polars version
+#!pip install --upgrade polars
+
+import polars as pl
+pl.show_versions()
+```
+
+<br>
+
+##### **Download dataset**
+
+The file being used here will be equivalent to a straight download from the home page of ChEMBL database, via clicking on the "Distinct compounds" (see the circled area in the image below). Options are available to download the files as .csv, .tsv or .sdf formats (located at the top right of the page).
+
+![Image adapted from ChEMBL database website](ChEMBL_cpds.jpg){fig-align="center"}
+
+I'm reading the .csv file first to have an overall look at the data.
+
+```{python}
+df = pl.read_csv("chembl_mols.csv")
+df.head()
+#df 
+```
+
+<br>
+
+##### **Some data wrangling and converting a csv file into a parquet file**
+
+A .csv file tends to be separated by delimiters e.g. commas, semicolons or tabs. To read it properly, we can add a delimiter term in the code to transform the dataframe into a more readable format.
+
+```{python}
+df = pl.read_csv("chembl_mols.csv", separator = ";")
+#df.head(10)
+df
+```
+
+Below are a series of data checks and cleaning that'll reduce the original .csv file size (about 664.8MB) into something more manageable. My goal is to get a parquet file to be under 100MB which can then be uploaded to GitHub without using Git large file storage (well, this will be the last resort if this fails).
+
+I'm checking the "Type" column first.
+
+```{python}
+df.group_by("Type").len()
+```
+
+The dataframe is further reduced in size by filtering the data for small molecules only, which are what I aim to look at.
+
+```{python}
+df_sm = df.filter((pl.col("Type") == "Small molecule"))
+df_sm #1,920,366 entries
+```
+
+I'm looking at "Structure Type" column next.
+
+```{python}
+df_sm.group_by("Structure Type").len()
+```
+
+There are 5485 entries with "NONE" as "Structure Type" which means they have unknown compound structures or not recorded in either compound_structures table or protein_therapeutics table. These entries will be removed them from df_sm first.
+
+Then I'm checking out the "Inorganic Flag" column to rule out all inorganic compounds and also all the unassigned compounds (i.e. unsure if they're inorganic or organic ones).
+
+```{python}
+# Check "Inorganic Flag" 
+df_sm.group_by("Inorganic Flag").len()
+
+# 12,932 as "0" - unassigned inorganic flag
+# 130 as "1" - inorganics
+```
+
+```{python}
+# Reducing file size by filtering out 
+# non-small molecules & structure type of "NONE"
+# then try the default write_parquet() with comp level = 22
+
+df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE"))
+
+df_sm #1,914,881 entries
+```
+
+```{python}
+# Check "NONE" entries are removed/filtered
+df_sm.group_by("Structure Type").len()
+```
+
+```{python}
+# Adding in inorganic flag
+df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE") & (pl.col("Inorganic Flag") == -1 ))
+
+df_sm #1,901,819 entries
+```
+
+The next step is to save the dataframe as a parquet file.
+
+```{{python}}
+from pathlib import Path
+
+path = Path.cwd() / "chembl_sm_mols.parquet"
+df_sm.write_parquet(path, compression_level=22)
+
+## Check parquet file size
+# file size when comp level at 22 = 122.1MB (original ~2 million entries)
+
+# file size when comp level at 22 = 100.8MB when file restricted by "Type" == "Small molecule" (1,920,366 entries)
+
+# file size when comp level at 22 = 100.4MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" (1,914,881 entries)
+
+# file size when comp level at 22 = 98.9MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" & "Inorganic Flag" == -1 (1,901,819 entries)
+```
+
+```{python}
+# try using use_pyarrow & pyarrow_options to partition datasets
+
+# path = Path.cwd() / "chembl_mols_type_part_obj"
+# df.write_parquet(
+#     path,
+#     use_pyarrow=True,
+#     pyarrow_options={"partition_cols": ["Type"]},
+# )
+
+## when comp level as default (not specified)
+# file sizes for max phase 1, 2, 3, 4 are all < 100MB
+# file size for max phase 0 is > 100MB
+
+## when comp level is 15
+# one extra file was produced for each max phase category - max phase 0 had two > 100MB files (not ideal)
+
+## when comp level is 20
+# 3 files created for each max phase category of similar size as mentioned previously
+
+## If using "Type" as partition column - "Small molecule" parquet file size = 134.3MB
+```
+
+Finally, I'm reading the saved parquet file into a dataframe to see if it is working.
+
+```{python}
+df_pa = pl.read_parquet("chembl_sm_mols.parquet")
+
+df_pa
+```
+
+I'm glad it works. The next post will be about trying to use Polars dataframe library all the way with *Scikit_learn* (which I'm unsure if it is possible at the moment but I'll give it a try).
