@@ -153,6 +153,7 @@ path = Path.cwd() / "chembl_sm_mols.parquet"
 df_sm.write_parquet(path, compression_level=22)
 
 ## Check parquet file size
+## Not using partitions---
 # file size when comp level at 22 = 122.1MB (original ~2 million entries)
 
 # file size when comp level at 22 = 100.8MB when file restricted by "Type" == "Small molecule" (1,920,366 entries)
@@ -160,22 +161,8 @@ df_sm.write_parquet(path, compression_level=22)
 # file size when comp level at 22 = 100.4MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" (1,914,881 entries)
 
 # file size when comp level at 22 = 98.9MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" & "Inorganic Flag" == -1 (1,901,819 entries)
-```
 
-***Table of file size changes (without using partitions & using partitions)***
-
-
-
-```{python}
-# try using use_pyarrow & pyarrow_options to partition datasets
-
-# path = Path.cwd() / "chembl_mols_type_part_obj"
-# df.write_parquet(
-#     path,
-#     use_pyarrow=True,
-#     pyarrow_options={"partition_cols": ["Type"]},
-# )
-
+## Using partitions---
 ## when comp level as default (not specified)
 # file sizes for max phase 1, 2, 3, 4 are all < 100MB
 # file size for max phase 0 is > 100MB
@@ -187,6 +174,56 @@ df_sm.write_parquet(path, compression_level=22)
 # 3 files created for each max phase category of similar size as mentioned previously
 
 ## If using "Type" as partition column - "Small molecule" parquet file size = 134.3MB
+```
+
+
+::: {#tbl-panel}
++-------------------+--------------------------------------+--------------+--------------------+
+| Compression level | Data restrictions                    | File size    | Number of entries  |
++===================+======================================+==============+====================+
+| 22                | None                                 | 122.1 MB     | ~2 million         | 
++-------------------+--------------------------------------+--------------+--------------------+
+| 22                | - Small molecules only               | 100.8 MB     | 1,920,366          |
++-------------------+--------------------------------------+--------------+--------------------+
+| 22                | - Small molecules only               | 100.4 MB     | 1,914,881          |
+|                   | - Exclude structure type with "NONE" |              |                    |
++-------------------+--------------------------------------+--------------+--------------------+
+| 22                | - Small molecules only               | 98.9 MB      | 1,901,819          |
+|                   | - Exclude structure type with "NONE" |              |                    |
+|                   | - Remove inorganic compounds         |              |                    |
++-------------------+--------------------------------------+--------------+--------------------+
+
+: File size changes without data partitions {#tbl-first}
+
++-------------------+-----------------------------------+--------------+--------------------+
+| Compression level | Data restrictions                 | File size    | Number of entries  |
++===================+===================================+==============+====================+
+| default           | None                              | to add       | ~2 million         | 
++-------------------+-----------------------------------+--------------+--------------------+
+| to add            | - to be entered                   | to add       | to add             |
++-------------------+-----------------------------------+--------------+--------------------+
+| to add            | - to be entered                   | to add       | to add             |
+|                   | - to be entered                   |              |                    |
++-------------------+-----------------------------------+--------------+--------------------+
+| to add            | - to be entered                   | to add       | to add             |
+|                   | - to be entered                   |              |                    |
+|                   | - to be entered                   |              |                    |
++-------------------+-----------------------------------+--------------+--------------------+
+
+: File size changes with data partitions {#tbl-second}
+
+Tables of parquet file size changes
+:::
+
+```{python}
+## try using use_pyarrow & pyarrow_options to partition datasets
+
+# path = Path.cwd() / "chembl_mols_type_part_obj"
+# df.write_parquet(
+#     path,
+#     use_pyarrow=True,
+#     pyarrow_options={"partition_cols": ["Type"]},
+# )
 ```
 
 Finally, I'm reading the saved parquet file into a dataframe to see if it is working.
