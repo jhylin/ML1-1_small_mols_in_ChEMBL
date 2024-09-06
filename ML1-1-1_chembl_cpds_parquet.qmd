@@ -23,7 +23,7 @@ Why revamping this post?
 
 Three reasons for this: 
 
-1. ChEMBL file downloaded straight from website was way too large to be uploaded to GitHub (this was one of my very early posts with ChEMBL being completely new to me at the time so I downloaded the data from ChEMBL website without thinking too much, obviously there are currently other better and more reproducible ways to source ChEMBL data e.g. my more recent posts)
+1. ChEMBL file downloaded straight from website was way too large to be uploaded to GitHub (this was one of my very early posts with ChEMBL being completely new to me at the time so I downloaded the data from ChEMBL website without thinking too much, obviously there are currently other better and more reproducible ways to source ChEMBL data e.g. my more recent posts or through other ways in the literatures)
 
     Note: GitHub blocks files larger than 100MB
 
@@ -86,6 +86,7 @@ A .csv file tends to be separated by delimiters e.g. commas, semicolons or tabs.
 ```{python}
 df = pl.read_csv("chembl_mols.csv", separator = ";")
 df.head()
+#df
 ```
 
 Below are a series of data checks and cleaning that'll reduce the original .csv file size (about 664.8MB) into something more manageable. My goal is to get a parquet file to be under 100MB which can then be uploaded to GitHub without using Git large file storage (well, this will be the last resort if this fails).
@@ -109,7 +110,7 @@ I'm looking at "Structure Type" column next.
 df_sm.group_by("Structure Type").len()
 ```
 
-There are 5485 entries with "NONE" as "Structure Type" which means they have unknown compound structures or not recorded in either compound_structures table or protein_therapeutics table. These entries will be removed them from df_sm first.
+There are 5485 entries with "NONE" as "Structure Type" which means they have unknown compound structures or not recorded in either compound_structures table or protein_therapeutics table. These entries will be removed from df_sm first.
 
 Then I'm checking out the "Inorganic Flag" column to rule out all inorganic compounds and also all the unassigned compounds (i.e. unsure if they're inorganic or organic ones).
 
@@ -147,90 +148,67 @@ The next step is to save the dataframe as a parquet file.
 
 Reference: [Apache Parquet documentations](https://parquet.apache.org/docs/)
 
+I have tried two different ways where one is using the write_parquet() by only adding file compression level (the "without partition" way), and the other one using use_pyarrow & pyarrow_options to partition datasets. The changes in parquet file size are shown in the following two tables.
+
 ```{{python}}
+# Without partitioning dataset
 from pathlib import Path
 path = Path.cwd() / "chembl_sm_mols.parquet"
 df_sm.write_parquet(path, compression_level=22)
-
-## Check parquet file size
-## Not using partitions---
-# file size when comp level at 22 = 122.1MB (original ~2 million entries)
-
-# file size when comp level at 22 = 100.8MB when file restricted by "Type" == "Small molecule" (1,920,366 entries)
-
-# file size when comp level at 22 = 100.4MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" (1,914,881 entries)
-
-# file size when comp level at 22 = 98.9MB when file restricted by "Type" == "Small molecule" & "Structure Type" != "NONE" & "Inorganic Flag" == -1 (1,901,819 entries)
-
-## Using partitions---
-## when comp level as default (not specified)
-# file sizes for max phase 1, 2, 3, 4 are all < 100MB
-# file size for max phase 0 is > 100MB
-
-## when comp level is 15
-# one extra file was produced for each max phase category - max phase 0 had two > 100MB files (not ideal)
-
-## when comp level is 20
-# 3 files created for each max phase category of similar size as mentioned previously
-
-## If using "Type" as partition column - "Small molecule" parquet file size = 134.3MB
 ```
 
++-------------------+--------------------------------------+--------------+-------------------+
+| Compression level | Data restrictions                    | File size    | Number of entries |
++===================+======================================+==============+===================+
+| 22                | None                                 | 122.1 MB     | 2,331,700         | 
++-------------------+--------------------------------------+--------------+-------------------+
+| 22                | - Small molecules only               | 100.8 MB     | 1,920,366         |
++-------------------+--------------------------------------+--------------+-------------------+
+| 22                | - Small molecules only               | 100.4 MB     | 1,914,881         |
+|                   | - Exclude structure type with "NONE" |              |                   |
++-------------------+--------------------------------------+--------------+-------------------+
+| 22                | - Small molecules only               | 98.9 MB      | 1,901,819         |
+|                   | - Exclude structure type with "NONE" |              |                   |
+|                   | - Remove inorganic compounds         |              |                   |
++-------------------+--------------------------------------+--------------+-------------------+
 
-::: {#tbl-panel}
-+-------------------+--------------------------------------+--------------+--------------------+
-| Compression level | Data restrictions                    | File size    | Number of entries  |
-+===================+======================================+==============+====================+
-| 22                | None                                 | 122.1 MB     | ~2 million         | 
-+-------------------+--------------------------------------+--------------+--------------------+
-| 22                | - Small molecules only               | 100.8 MB     | 1,920,366          |
-+-------------------+--------------------------------------+--------------+--------------------+
-| 22                | - Small molecules only               | 100.4 MB     | 1,914,881          |
-|                   | - Exclude structure type with "NONE" |              |                    |
-+-------------------+--------------------------------------+--------------+--------------------+
-| 22                | - Small molecules only               | 98.9 MB      | 1,901,819          |
-|                   | - Exclude structure type with "NONE" |              |                    |
-|                   | - Remove inorganic compounds         |              |                    |
-+-------------------+--------------------------------------+--------------+--------------------+
+: Parquet file size changes without data partitions (note: original .csv file size is 664.8 MB)
 
-: File size changes without data partitions {#tbl-first}
-
-+-------------------+-----------------------------------+--------------+--------------------+
-| Compression level | Data restrictions                 | File size    | Number of entries  |
-+===================+===================================+==============+====================+
-| default           | None                              | to add       | ~2 million         | 
-+-------------------+-----------------------------------+--------------+--------------------+
-| to add            | - to be entered                   | to add       | to add             |
-+-------------------+-----------------------------------+--------------+--------------------+
-| to add            | - to be entered                   | to add       | to add             |
-|                   | - to be entered                   |              |                    |
-+-------------------+-----------------------------------+--------------+--------------------+
-| to add            | - to be entered                   | to add       | to add             |
-|                   | - to be entered                   |              |                    |
-|                   | - to be entered                   |              |                    |
-+-------------------+-----------------------------------+--------------+--------------------+
-
-: File size changes with data partitions {#tbl-second}
-
-Tables of parquet file size changes
-:::
-
-```{python}
-## try using use_pyarrow & pyarrow_options to partition datasets
-
-# path = Path.cwd() / "chembl_mols_type_part_obj"
-# df.write_parquet(
-#     path,
-#     use_pyarrow=True,
-#     pyarrow_options={"partition_cols": ["Type"]},
-# )
+```{{python}}
+# Partitioning dataset
+path = Path.cwd() / "chembl_mols_type_part_obj"
+df.write_parquet(
+    path,
+    use_pyarrow=True,
+    pyarrow_options={"partition_cols": ["Type"]},
+)
 ```
 
-Finally, I'm reading the saved parquet file into a dataframe to see if it is working.
++-------------------+----------------------+---------------------------------------------+-------------------+
+| Compression level | Data restrictions    | File size                                   | Number of entries |
++===================+======================+=============================================+===================+
+| default           | None                 | - using "Max Phase" as partition column     |                   |
+|                   |                      | - max phases 1-4: each < 100 MB             | 2,331,700         |
+|                   |                      | - max phase 0: > 100 MB                     |                   |
++-------------------+----------------------+---------------------------------------------+-------------------+
+| 15                | None                 | - max phase 0: two files each > 100 MB      | 2,331,700         |
+|                   |                      | - for max phase 1-4 each < 100 MB           |                   |
+|                   |                      | - two files produced for each max phase     |                   |
++-------------------+----------------------+---------------------------------------------+-------------------+
+| 20                | None                 | - 3 files created for each max phase        | 2,331,700         |
+|                   |                      | - similar sizes as mentioned above          |                   |
++-------------------+----------------------+---------------------------------------------+-------------------+
+| default           | None                 | - using "Type" as partition column          | 2,331,700         |
+|                   |                      | - "Small molecule" file size = 134.3 MB     |                   |
++-------------------+----------------------+---------------------------------------------+-------------------+
+
+: Parquet file size changes with data partitions (note: original .csv file size is 664.8 MB)
+
+Finally, it appears that the one with three data restrictions at compression level of 22 has produced a file at 98.9 MB. I'm reading this file below into a dataframe to see if it's working.
 
 ```{python}
 df_pa = pl.read_parquet("chembl_sm_mols.parquet")
 df_pa
 ```
 
-I'm glad it works. The next post will be about trying to use Polars dataframe library all the way with *Scikit_learn* (which I'm unsure if it is possible at the moment but I'll give it a try).
+I'm glad it does work. The next series of posts will be about trying to use Polars dataframe library all the way with *Scikit_learn* (which I'm unsure if it is possible at the moment but I'll give it a try).
