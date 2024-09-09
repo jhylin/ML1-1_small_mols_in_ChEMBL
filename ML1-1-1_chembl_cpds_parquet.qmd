@@ -15,11 +15,9 @@ categories:
 jupyter: python3
 ---
 
-##### **An attempt to revamp this post**
+##### **Why revamping this post?**
 
 *starting from 31/8/24*
-
-Why revamping this post?
 
 Three reasons for this: 
 
@@ -27,23 +25,23 @@ Three reasons for this:
 
     Note: GitHub blocks files larger than 100MB
 
-2. Polars seems to be a bit more integrated with sklearn now so I'm wondering if Polars can be used with sklearn wholly (i.e. not using Pandas at all)
+2. Polars seems to be a bit more integrated with Scikit_learn now so I'm wondering if Polars can be used with sklearn solely (i.e. not using Pandas at all)
 
-3. This post is one of my earlier less mature posts (bit embarrassing when I'm looking at it now) so I just want to see if I can improve it a little
+3. This post is one of my earlier less mature posts (bit embarrassing when I'm looking at it now) so I just want to improve it a little at least
 
 <br>
 
 ##### **Previous post updates**
 
-*Latest update from 19th April 2024 - Polars is currently more integrated with Scikit-learn from version 1.4 (since January 2024), see this link re. [Polars output in set_output](https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_4_0.html#polars-output-in-set-output) for Polars dataframe outputs in Scikit-learn, and also a few other Polars enhancements from release [version 1.4 changelog](https://scikit-learn.org/dev/whats_new/v1.4.html#). I may attempt to update this series of posts in the future as they most probably won't need the conversion from Polars to Pandas dataframes anymore.*
+*Latest update from 19th April 2024 - Polars is currently more integrated with Scikit-learn from version 1.4 (since January 2024), see this link re. [Polars output in set_output](https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_4_0.html#polars-output-in-set-output) for Polars dataframe outputs in Scikit-learn, and also a few other Polars enhancements from release [version 1.4 changelog](https://scikit-learn.org/dev/whats_new/v1.4.html#).*
 
-*Previous post update was on 16th August 2023 - some code updates only, please always refer to [Polars API reference](https://docs.pola.rs/py-polars/html/reference/index.html) documentations for most up-to-date code.*
+*Previous post update on 16th August 2023 - some code updates only, please always refer to [Polars API reference](https://docs.pola.rs/py-polars/html/reference/index.html) for most up-to-date code.*
 
 <br>
 
 ##### **Background**
 
-This is the first part of the series of posts on building a logistic regression model by using *Scikit_learn* with [Polars dataframe library](https://docs.pola.rs/) (note: the older version of this post also uses Pandas). Polars is a blazingly fast dataframe library that is written completely in Rust with a very light Python binding that is available for use in Python or Rust programming language. Here I'll be using Python throughout all posts in the series. 
+This is the first part of the series of posts on building a logistic regression model by using Scikit_learn with [Polars dataframe library](https://docs.pola.rs/) (note: the older version of this post also uses Pandas). Polars is a fast (or more commonly known as "blazingly fast") dataframe library that is written completely in Rust with a very light Python binding that is available for use in Python or Rust programming language. Here I'll be using Python throughout all posts in the series. 
 
 This post will only focus on getting the small molecules data ready from ChEMBL database via a straight website download (not recommended if you're researching or doing virtual experiments that require a good level of data reproducibility, e.g. you'll need the version of data etc., this is however only a demonstration so I'll leave it as it is), and then convert the comma separated value (.csv) file into a parquet file (for better file compressions) in order to upload the data into GitHub. 
 
@@ -52,10 +50,10 @@ This post will only focus on getting the small molecules data ready from ChEMBL 
 ##### **Install and import Polars**
 
 ```{python}
-# To install Polars dataframe library
+## To install Polars dataframe library
 #!pip install polars
 
-# Update Polars version
+## Update Polars version
 #!pip install --upgrade polars
 
 import polars as pl
@@ -68,7 +66,7 @@ pl.show_versions()
 
 The file being used here will be equivalent to a straight download from the home page of ChEMBL database, via clicking on the "Distinct compounds" (see the circled area in the image below). Options are available to download the files as .csv, .tsv or .sdf formats (located at the top right of the page).
 
-![Image adapted from ChEMBL database website](ChEMBL_cpds.jpg){fig-align="center"}
+![Image adapted from ChEMBL database website at version 31](ChEMBL_cpds.jpg){fig-align="center"}
 
 I'm reading the .csv file first to have an overall look at the data.
 
@@ -89,7 +87,7 @@ df.head()
 #df
 ```
 
-Below are a series of data checks and cleaning that'll reduce the original .csv file size (about 664.8MB) into something more manageable. My goal is to get a parquet file to be under 100MB which can then be uploaded to GitHub without using Git large file storage (well, this will be the last resort if this fails).
+Below are a series of data checks and cleaning that'll reduce the original .csv file size (about 664.8MB) into something more manageable. My goal is to get a parquet file under 100MB which can then be uploaded to GitHub without using Git large file storage (this will be the last resort if this fails).
 
 I'm checking the "Type" column first.
 
@@ -115,7 +113,6 @@ There are 5485 entries with "NONE" as "Structure Type" which means they have unk
 Then I'm checking out the "Inorganic Flag" column to rule out all inorganic compounds and also all the unassigned compounds (i.e. unsure if they're inorganic or organic ones).
 
 ```{python}
-# Check "Inorganic Flag" 
 df_sm.group_by("Inorganic Flag").len()
 
 # 12,932 as "0" - unassigned inorganic flag
@@ -123,10 +120,6 @@ df_sm.group_by("Inorganic Flag").len()
 ```
 
 ```{python}
-# Reducing file size by filtering out 
-# non-small molecules & structure type of "NONE"
-# then try the default write_parquet() with comp level = 22
-
 df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE"))
 
 df_sm #1,914,881 entries
@@ -148,7 +141,7 @@ The next step is to save the dataframe as a parquet file.
 
 Reference: [Apache Parquet documentations](https://parquet.apache.org/docs/)
 
-I have tried two different ways where one is using the write_parquet() by only adding file compression level (the "without partition" way), and the other one using use_pyarrow & pyarrow_options to partition datasets. The changes in parquet file size are shown in the following two tables.
+I have tried two main different ways where one is using the write_parquet() by only adding file compression level parameter (the "without partition" way), and the other one using use_pyarrow & pyarrow_options to partition datasets. The changes in parquet file size are shown in the following two tables.
 
 ```{{python}}
 # Without partitioning dataset
@@ -193,7 +186,7 @@ df.write_parquet(
 +-------------------+----------------------+---------------------------------------------+-------------------+
 | 15                | None                 | - max phase 0: two files each > 100 MB      | 2,331,700         |
 |                   |                      | - for max phase 1-4 each < 100 MB           |                   |
-|                   |                      | - two files produced for each max phase     |                   |
+|                   |                      | - 2 files produced for each max phase       |                   |
 +-------------------+----------------------+---------------------------------------------+-------------------+
 | 20                | None                 | - 3 files created for each max phase        | 2,331,700         |
 |                   |                      | - similar sizes as mentioned above          |                   |
@@ -211,4 +204,4 @@ df_pa = pl.read_parquet("chembl_sm_mols.parquet")
 df_pa
 ```
 
-I'm glad it does work. The next series of posts will be about trying to use Polars dataframe library all the way with *Scikit_learn* (which I'm unsure if it is possible at the moment but I'll give it a try).
+So it looks like it does. The next series of posts will be about trying to use Polars dataframe library all the way with Scikit_learn (which I'm unsure if it is possible at the moment but I'll give it a try).

@@ -22,8 +22,11 @@ jupyter: python3
 <br>
 
 ```{python}
-# read parquet files as df
+import polars as pl
 
+# read parquet file as df
+df_pa = pl.read_parquet("chembl_sm_mols.parquet")
+df_pa
 ```
 
 **The following needs to be updated & splitted into smaller posts/qmds**
@@ -36,7 +39,7 @@ Now I had the full dataframe, and I wanted to find out what types of physicochem
 
 ```{python}
 # Print all column names and data types 
-print(df.glimpse())
+print(df_pa.glimpse())
 ```
 
 There were a few terms where I wasn't sure of their exact meanings, so I went through the ChEMBL_31 schema documentation and ChEMBL database website to find out. This took a while and was an important step to take so that I would know what to do when reaching the ML phase.
