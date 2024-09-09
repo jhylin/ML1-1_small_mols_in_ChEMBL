@@ -15,12 +15,6 @@ categories:
 jupyter: python3
 ---
 
-**Plan**
-
-* Try to see if Polars can be used with sklearn completely for building ML model
-
-<br>
-
 ```{python}
 import polars as pl
 
@@ -29,18 +23,14 @@ df_pa = pl.read_parquet("chembl_sm_mols.parquet")
 df_pa
 ```
 
-**The following needs to be updated & splitted into smaller posts/qmds**
-
-Initially, I only wanted to download around 24 compounds from the ChEMBL database first. Unknowingly, I ended up downloading the whole curated set of 2,331,700 small molecules (!), and I found this out when I loaded the dataframe after setting up the delimiter for the csv file, which later led to the file size problem mentioned earlier.
-
-Loading these 2,331,700 rows of data was fast, which occurred within a few seconds without exaggeration. This echoed many users' experiences with Polars, so this was another nice surprise, and once again confirmed that Rust, and also Apache arrow, which was used as Polars' foundation, were solid in speed.
-
-Now I had the full dataframe, and I wanted to find out what types of physicochemical properties were there for the compounds.
+Now I have the small molecules dataframe, I want to find out what types of physicochemical properties are there in the dataset.
 
 ```{python}
 # Print all column names and data types 
 print(df_pa.glimpse())
 ```
+
+**The following needs to be updated**
 
 There were a few terms where I wasn't sure of their exact meanings, so I went through the ChEMBL_31 schema documentation and ChEMBL database website to find out. This took a while and was an important step to take so that I would know what to do when reaching the ML phase.
 
