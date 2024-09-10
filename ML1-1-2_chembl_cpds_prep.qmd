@@ -30,15 +30,11 @@ Now I have the small molecules dataframe, I want to find out what types of physi
 print(df_pa.glimpse())
 ```
 
-**The following needs to be updated**
+I've gone through the ChEMBL_31 schema documentation and ChEMBL database website to find out the meanings of some of the column names. The explanations for each term are adapted from ChEMBL_31 schema documentation (available as "Release notes" on the website at the time), or if definitions for certain terms are not available from the documentation, I resort to interpret them myself by going into "Dinstict compounds" section in the ChEMBL database.
 
-There were a few terms where I wasn't sure of their exact meanings, so I went through the ChEMBL_31 schema documentation and ChEMBL database website to find out. This took a while and was an important step to take so that I would know what to do when reaching the ML phase.
+The definitions for some of the listed physicochemical properties are:
 
-I have selected a few physicochemical properties down below so that readers and I could gather some reasonable understandings for each term. The explanations for each term were adapted from ChEMBL_31 schema documentation (available as "Release notes" on the website), or if definitions for certain terms were not available from the documentation, I resorted to interpret them myself by going into "Dinstict compounds" section on the ChEMBL database, where I would click on, e.g. bioactivities, for a random compound in there to see what results showed up and then described them below.
-
-The definitions for some of the listed physicochemical properties were:
-
-**Max Phase** - Maximum phase of development reached for the compound (where 4 = approved). Null was where max phase has not yet been assigned.
+**Max Phase** - Maximum phase of development reached for the compound (where 4 = approved). Null is where max phase has not yet been assigned.
 
 **Bioactivities** - Various biological assays used for the compounds e.g. IC~50~, GI~50~, potency tests etc.
 
@@ -50,11 +46,11 @@ The definitions for some of the listed physicochemical properties were:
 
 **#RO5 Violations** - Number of violations of Lipinski's rule-of-five, using HBA and HBD definitions
 
-**Passes Ro3** - Indicated whether the compound passed the rule-of-three (MW \< 300, logP \< 3 etc)
+**Passes Ro3** - Indicating whether the compound passed the rule-of-three (MW \< 300, logP \< 3 etc)
 
-**QED Weighted** - Weighted quantitative estimate of drug likeness (as defined by Bickerton *et al.*, Nature Chem 2012)
+**QED Weighted** - Weighted quantitative estimate of drug likeness (***cite*** as defined by Bickerton *et al.*, Nature Chem 2012)
 
-**Inorganic flag** - Indicated whether the molecule was inorganic (i.e., containing only metal atoms and \<2 carbon atoms), where 1 = inorganic compound and -1 = not inorganic compound (assuming 0 meant it was neither case or yet to be assigned)
+**Inorganic flag** - Indicating whether the molecule is inorganic (i.e., containing only metal atoms and \<2 carbon atoms), where 1 = inorganic compound and -1 = not inorganic compound (assuming 0 means it is neither case or yet to be assigned)
 
 **Heavy Atoms** - Number of heavy (non-hydrogen) atoms
 
@@ -66,11 +62,15 @@ The definitions for some of the listed physicochemical properties were:
 
 **CX LogD** - The calculated octanol/water distribution coefficient at pH = 7.4 using ChemAxon v17.29.0
 
-**Structure Type** - based on compound_structures table, where SEQ indicated an entry in the protein_therapeutics table instead, NONE indicated an entry in neither tables, e.g. structure unknown
+**Structure Type** - based on compound_structures table, where SEQ indicates an entry in the protein_therapeutics table instead, NONE indicates an entry in neither tables, e.g. structure unknown
 
 **Inchi Key** - the IUPAC international chemical identifier key
 
-From the df.glimpse() method previously, there were a lot of columns with the data type of "Utf8", which meant they were strings. There were only two columns that had "Int64", which meant they were integers. A lot of these columns were actually storing numbers as strings. So to make my life easier, I went on to convert these data types into the more appropriate ones for selected columns.
+From the `glimpse()` method previously, there are a lot of columns with the data type of "str". There are only two columns having "i64", meaning they are integers. A lot of these columns are actually storing numbers as strings. So to make my life easier, I'm going to convert these strings into either integers or floats.
+
+**The following needs to be updated**
+
+*?is the casting code still the same as below or there's another/better way to do it*
 
 ```{python}
 # Convert data types for multiple selected columns

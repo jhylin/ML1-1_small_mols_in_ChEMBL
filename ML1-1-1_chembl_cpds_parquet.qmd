@@ -27,7 +27,7 @@ Three reasons for this:
 
 2. Polars seems to be a bit more integrated with Scikit_learn now so I'm wondering if Polars can be used with sklearn solely (i.e. not using Pandas at all)
 
-3. This post is one of my earlier less mature posts (bit embarrassing when I'm looking at it now) so I just want to improve it a little at least
+3. This post is one of my earlier less mature posts (very embarrassing when I'm looking at it now...) so I just want to improve it a little at least
 
 <br>
 
@@ -141,7 +141,7 @@ The next step is to save the dataframe as a parquet file.
 
 Reference: [Apache Parquet documentations](https://parquet.apache.org/docs/)
 
-I have tried two main different ways where one is using the write_parquet() by only adding file compression level parameter (the "without partition" way), and the other one using use_pyarrow & pyarrow_options to partition datasets. The changes in parquet file size are shown in the following two tables.
+I have tried two main different ways where one is using the `write_parquet()` by only adding file compression level parameter (the "without partition" way), and the other one using use_pyarrow & pyarrow_options to partition datasets. The changes in parquet file size are shown in the following two tables.
 
 ```{{python}}
 # Without partitioning dataset
