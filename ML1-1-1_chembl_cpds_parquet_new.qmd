@@ -187,9 +187,9 @@ df.write_parquet(
 +===================+======================+=============================================+===================+
 | default           | None                 | - using "Max Phase" as partition column     |                   |
 |                   |                      | - max phases 1-4: each < 100 MB             | 2,331,700         |
-|                   |                      | - max phase 0 > 100 MB                      |                   |
+|                   |                      | - max phase 0 > 104 MB                      |                   |
 +-------------------+----------------------+---------------------------------------------+-------------------+
-| 15                | None                 | - max phase 0 > 100 MB                      | 2,331,700         |
+| 15                | None                 | - max phase 0 > 104 MB                      | 2,331,700         |
 |                   |                      | - max phase 1-4: each < 100 MB              |                   |
 +-------------------+----------------------+---------------------------------------------+-------------------+
 | 20                | None                 | - similar sizes as mentioned above          | 2,331,700         |
@@ -200,7 +200,7 @@ df.write_parquet(
 
 : Parquet file size changes with data partitions (note: original .csv file size is 664.8 MB)
 
-Finally, it appears that the one with three data restrictions at compression level of 22 has produced a file at 98.9 MB. I'm reading this file below into a dataframe to see if it's working.
+Finally, it appears that the one with three data restrictions at compression level of 22 has produced a file at 103.7 MB. I'm reading this file below into a dataframe to see if it's working.
 
 ```{python}
 df_pa = pl.read_parquet("chembl_sm_mols.parquet")
