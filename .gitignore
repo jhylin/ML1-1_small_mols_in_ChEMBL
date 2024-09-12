@@ -11,6 +11,14 @@ ML1-1-1_chembl_cpds_parquet_files
 ML1-1-1_chembl_cpds_parquet.html
 ML1-1-1_chembl_cpds_parquet_files.html
 
+chembl_mols_mp_part
+chembl_mols_mp_part_15
+chembl_mols_mp_part_20
+chembl_mols_type_part
+chembl_no_res.parquet
+chembl_res_sm_st.parquet
+chembl_res_sm.parquet
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

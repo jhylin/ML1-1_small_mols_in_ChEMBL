@@ -15,6 +15,8 @@ categories:
 jupyter: python3
 ---
 
+**This is the latest version of 1st post that is taking care of previous missing string values e.g. "NONE" and "" - going to wait till I've reached 3rd post to decide if this version of 1st post can replace its older version**
+
 ##### **Why revamping this post?**
 
 *starting from 31/8/24*
@@ -23,7 +25,7 @@ Three reasons for this:
 
 1. ChEMBL file downloaded straight from website was way too large to be uploaded to GitHub (this was one of my very early posts with ChEMBL being completely new to me at the time so I downloaded the data from ChEMBL website without thinking too much, obviously there are currently other better and more reproducible ways to source ChEMBL data e.g. my more recent posts or through other ways in the literatures)
 
-    Note: GitHub blocks files larger than 100MiB, which is in mebibytes, and equivalent to 1,048,576 bytes (my very bad before as I've read "MiB" as "MB" from this [GitHub doc](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)!)
+    Note: GitHub blocks files larger than 100 MiB, which is in mebibytes and equivalent to 1,048,576 bytes and 1.04858 MB ([reference](https://www.ibm.com/docs/en/storage-insights?topic=overview-units-measurement-storage-data)- my very bad before as I've read "MiB" as "MB" from this [GitHub doc](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)!)
 
 2. Polars seems to be a bit more integrated with Scikit_learn now so I'm wondering if Polars can be used with sklearn solely (i.e. not using Pandas at all)
 
@@ -50,11 +52,11 @@ This post will only focus on getting the small molecules data ready from ChEMBL 
 ##### **Install and import Polars**
 
 ```{python}
-## To install Polars dataframe library
-#!pip install polars
+## To install Polars dataframe library (or install in virtual environments)
+#pip install polars
 
 ## Update Polars version
-#!pip install --upgrade polars
+#pip install --upgrade polars
 
 import polars as pl
 pl.show_versions()
@@ -84,12 +86,12 @@ A .csv file tends to be separated by delimiters e.g. commas, semicolons or tabs.
 Another thing being added below is to deal with null values early - by filling in "None" and "" values in the dataframe as "null" first. This will save some hassles later on (I've encountered this problem when trying to convert column data types so found out this may be the best way to resolve it).
 
 ```{python}
-df = pl.read_csv("chembl_mols.csv", separator = ";", null_values= ["None", ""])
+df = pl.read_csv("chembl_mols.csv", separator = ";", null_values = ["None", ""])
 df.head()
 #df
 ```
 
-Below are a series of data checks and cleaning that'll reduce the original .csv file size (about 664.8MB) into something more manageable. My goal is to get a parquet file under 100MB which can then be uploaded to GitHub without using Git large file storage (this will be the last resort if this fails).
+Below are a series of data checks and cleaning that'll reduce the original .csv file size (about 664.8 MB) into something more manageable. My goal is to get a parquet file under 104 MB which can then be uploaded to GitHub without using Git large file storage (this will be the last resort if this fails).
 
 I'm checking the "Type" column first.
 
@@ -139,25 +141,18 @@ df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type
 df_sm #1,901,819 entries
 ```
 
-```{python}
-#df.group_by("a").len()  
-df_sm.group_by("Synonyms").len()
-```
-
 The next step is to save the dataframe as a parquet file.
 
 Reference: [Apache Parquet documentations](https://parquet.apache.org/docs/)
 
 I have tried two main different ways where one is using the `write_parquet()` by only adding file compression level parameter (the "without partition" way), and the other one using use_pyarrow & pyarrow_options to partition datasets. The changes in parquet file size are shown in the following two tables.
 
-```{python}
+```{{python}}
 # Without partitioning dataset
 from pathlib import Path
 path = Path.cwd() / "chembl_sm_mols.parquet"
 df_sm.write_parquet(path, compression_level=22)
 ```
-
-* file size after using the "null_values" - 103.7MB (should be okay as the file is git pushed without problem!)
 
 +-------------------+--------------------------------------+--------------+-------------------+
 | Compression level | Data restrictions                    | File size    | Number of entries |
@@ -178,9 +173,10 @@ df_sm.write_parquet(path, compression_level=22)
 
 ```{{python}}
 # Partitioning dataset
-path = Path.cwd() / "chembl_mols_type_part_obj"
+path = Path.cwd() / "chembl_mols_type_part"
 df.write_parquet(
     path,
+    #compression_level=20,
     use_pyarrow=True,
     pyarrow_options={"partition_cols": ["Type"]},
 )
@@ -191,17 +187,15 @@ df.write_parquet(
 +===================+======================+=============================================+===================+
 | default           | None                 | - using "Max Phase" as partition column     |                   |
 |                   |                      | - max phases 1-4: each < 100 MB             | 2,331,700         |
-|                   |                      | - max phase 0: > 100 MB                     |                   |
+|                   |                      | - max phase 0 > 100 MB                      |                   |
 +-------------------+----------------------+---------------------------------------------+-------------------+
-| 15                | None                 | - max phase 0: two files each > 100 MB      | 2,331,700         |
-|                   |                      | - for max phase 1-4 each < 100 MB           |                   |
-|                   |                      | - 2 files produced for each max phase       |                   |
+| 15                | None                 | - max phase 0 > 100 MB                      | 2,331,700         |
+|                   |                      | - max phase 1-4: each < 100 MB              |                   |
 +-------------------+----------------------+---------------------------------------------+-------------------+
-| 20                | None                 | - 3 files created for each max phase        | 2,331,700         |
-|                   |                      | - similar sizes as mentioned above          |                   |
+| 20                | None                 | - similar sizes as mentioned above          | 2,331,700         |
 +-------------------+----------------------+---------------------------------------------+-------------------+
 | default           | None                 | - using "Type" as partition column          | 2,331,700         |
-|                   |                      | - "Small molecule" file size = 134.3 MB     |                   |
+|                   |                      | - "Small molecule" file size = 135.2 MB     |                   |
 +-------------------+----------------------+---------------------------------------------+-------------------+
 
 : Parquet file size changes with data partitions (note: original .csv file size is 664.8 MB)
