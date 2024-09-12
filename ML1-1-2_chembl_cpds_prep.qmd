@@ -73,6 +73,82 @@ From the `glimpse()` method previously, there are a lot of columns with the data
 *?is the casting code still the same as below or there's another/better way to do it*
 
 ```{python}
+df_pa
+```
+
+```{python}
+# df = pl.DataFrame(
+
+#     {
+
+#         "a": [1, 2, None, 4],
+
+#         "b": [0.5, 4, None, 13],
+
+#     }
+
+# )
+# df
+```
+
+```{python}
+# "None" values
+# df.fill_null(strategy="zero") 
+# works only if "None" is of i64 or f64 etc.
+
+# df_pa.fill_null(strategy="zero")
+# df_pa
+```
+
+```{python}
+# Drop nulls
+import polars.selectors as cs
+df_pa.drop_nulls(subset=cs.string())
+
+# Significantly reduce the entries from 1,901,819 to 635,776 if dropping nulls with columns of string type
+
+```
+
+```{python}
+# fill_null
+df_pa.fill_null(0)
+df_pa
+
+```
+
+```{python}
+# df.cast({"foo": pl.Float32, "bar": pl.UInt8})
+
+df_pa.cast(
+  {"Molecular Weight": pl.Float64, 
+  "Targets": pl.Int64,
+  "Bioactivities": pl.Int64,
+  "AlogP": pl.Float64,
+  # Need to take care of "None" values
+  # "Polar Surface Area": pl.Float64,
+  # "HBA": pl.Int64,
+  # "HBD": pl.Int64,
+  # "#RO5 Violations": pl.Int64,
+  # "#Rotatable Bonds": pl.Int64, 
+  # "QED Weighted": pl.Float64,
+  # "CX Acidic pKa": pl.Float64,
+  # "CX Basic pKa": pl.Float64,
+  # "CX LogP": pl.Float64,
+  # "CX LogD": pl.Float64,
+  # "Aromatic Rings": pl.Int64, 
+  # "Heavy Atoms": pl.Int64,
+  # "HBA (Lipinski)": pl.Int64,
+  # "HBD (Lipinski)": pl.Int64,
+  # "#RO5 Violations (Lipinski)": pl.Int64, 
+  # "Molecular Weight (Monoisotopic)": pl.Float64
+  }
+  #strict=False
+)
+
+df_pa
+```
+
+```{python}
 # Convert data types for multiple selected columns
 # Note: only takes two positional arguments, 
 # so needed to use [] in code to allow more than two
@@ -87,26 +163,26 @@ From the `glimpse()` method previously, there are a lot of columns with the data
 # as it adds a new column under an alias name to dataframe
 df_new = df.with_columns(
     [
-        (pl.col("Molecular Weight")).cast(pl.Float64, strict = False),
-        (pl.col("Targets")).cast(pl.Int64, strict = False),
-        (pl.col("Bioactivities")).cast(pl.Int64, strict = False),
-        (pl.col("AlogP")).cast(pl.Float64, strict = False),
-        (pl.col("Polar Surface Area")).cast(pl.Float64, strict = False),
-        (pl.col("HBA")).cast(pl.Int64, strict = False),
-        (pl.col("HBD")).cast(pl.Int64, strict = False),
-        (pl.col("#RO5 Violations")).cast(pl.Int64, strict = False),
-        (pl.col("#Rotatable Bonds")).cast(pl.Int64, strict = False),
-        (pl.col("QED Weighted")).cast(pl.Float64, strict = False),
-        (pl.col("CX Acidic pKa")).cast(pl.Float64, strict = False),
-        (pl.col("CX Basic pKa")).cast(pl.Float64, strict = False),
-        (pl.col("CX LogP")).cast(pl.Float64, strict = False),
-        (pl.col("CX LogD")).cast(pl.Float64, strict = False),
-        (pl.col("Aromatic Rings")).cast(pl.Int64, strict = False),
-        (pl.col("Heavy Atoms")).cast(pl.Int64, strict = False),
-        (pl.col("HBA (Lipinski)")).cast(pl.Int64, strict = False),
-        (pl.col("HBD (Lipinski)")).cast(pl.Int64, strict = False),
-        (pl.col("#RO5 Violations (Lipinski)")).cast(pl.Int64, strict = False),
-        (pl.col("Molecular Weight (Monoisotopic)")).cast(pl.Float64, strict = False)
+        # (pl.col("Molecular Weight")).cast(pl.Float64, strict = False),
+        # (pl.col("Targets")).cast(pl.Int64, strict = False),
+        # (pl.col("Bioactivities")).cast(pl.Int64, strict = False),
+        # (pl.col("AlogP")).cast(pl.Float64, strict = False),
+        # (pl.col("Polar Surface Area")).cast(pl.Float64, strict = False),
+        # (pl.col("HBA")).cast(pl.Int64, strict = False),
+        # (pl.col("HBD")).cast(pl.Int64, strict = False),
+        # (pl.col("#RO5 Violations")).cast(pl.Int64, strict = False),
+        # (pl.col("#Rotatable Bonds")).cast(pl.Int64, strict = False),
+        # (pl.col("QED Weighted")).cast(pl.Float64, strict = False),
+        # (pl.col("CX Acidic pKa")).cast(pl.Float64, strict = False),
+        # (pl.col("CX Basic pKa")).cast(pl.Float64, strict = False),
+        # (pl.col("CX LogP")).cast(pl.Float64, strict = False),
+        # (pl.col("CX LogD")).cast(pl.Float64, strict = False),
+        # (pl.col("Aromatic Rings")).cast(pl.Int64, strict = False),
+        # (pl.col("Heavy Atoms")).cast(pl.Int64, strict = False),
+        # (pl.col("HBA (Lipinski)")).cast(pl.Int64, strict = False),
+        # (pl.col("HBD (Lipinski)")).cast(pl.Int64, strict = False),
+        # (pl.col("#RO5 Violations (Lipinski)")).cast(pl.Int64, strict = False),
+        # (pl.col("Molecular Weight (Monoisotopic)")).cast(pl.Float64, strict = False)
     ]
 )
 df_new.head()
