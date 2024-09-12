@@ -23,7 +23,7 @@ Three reasons for this:
 
 1. ChEMBL file downloaded straight from website was way too large to be uploaded to GitHub (this was one of my very early posts with ChEMBL being completely new to me at the time so I downloaded the data from ChEMBL website without thinking too much, obviously there are currently other better and more reproducible ways to source ChEMBL data e.g. my more recent posts or through other ways in the literatures)
 
-    Note: GitHub blocks files larger than 100MB
+    Note: GitHub blocks files larger than 100MiB, which is in mebibytes, and equivalent to 1,048,576 bytes (my very bad before as I've read "MiB" as "MB" from this [GitHub doc](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)!)
 
 2. Polars seems to be a bit more integrated with Scikit_learn now so I'm wondering if Polars can be used with sklearn solely (i.e. not using Pandas at all)
 
@@ -144,15 +144,6 @@ df_sm #1,901,819 entries
 df_sm.group_by("Synonyms").len()
 ```
 
-Adding one more data restriction step
-
-```{python}
-# Both "Name" and "Synonyms" columns are compound names - keeping only one for now in order to reduce data size
-# drop "Synonyms" column as not going to need it
-
-
-```
-
 The next step is to save the dataframe as a parquet file.
 
 Reference: [Apache Parquet documentations](https://parquet.apache.org/docs/)
@@ -166,7 +157,7 @@ path = Path.cwd() / "chembl_sm_mols.parquet"
 df_sm.write_parquet(path, compression_level=22)
 ```
 
-* file size after using the "null_values" - 103.7MB (hmm...)
+* file size after using the "null_values" - 103.7MB (should be okay as the file is git pushed without problem!)
 
 +-------------------+--------------------------------------+--------------+-------------------+
 | Compression level | Data restrictions                    | File size    | Number of entries |
