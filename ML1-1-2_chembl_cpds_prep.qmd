@@ -74,42 +74,70 @@ The older version of this post has had a code section for changing the data type
 
 ##### **Dealing with nulls**
 
-**The following needs to be updated**
-
-```{python}
-# fill_null
-# df_pa.fill_null(0)
-# df_pa
-```
-
 I'm using `null_count()` to see the distributions of all null entries in the dataset.
 
 ```{python}
-# Check for any null or NA or "" entries in the dataset
-# Alternative code that worked similarly was df.select(pl.all().null_count())
+# Alternative code: df_pa.select(pl.all().null_count())
 df_pa.null_count()
 ```
 
 ```{python}
-# Drop rows with null entries
-df_dn = df_new.drop_nulls()
-df_dn 
-# Number of rows reduced to 736,570
+df_pa
+```
+
+The following is basically a few different ways to remove the appropriate amount of null values from the original dataset.
+
+```{python}
+## Drop all rows with null entries
+# df_dn = df_pa.drop_nulls()
+# df_dn 
+
+# Number of rows reduced to 2,645 - seems way too much...
 ```
 
 ```{python}
-# Check that all rows with null values were dropped
+## Restricting drop nulls to only subsets of nulls in strings
+# import polars.selectors as cs
+# df_pa.drop_nulls(subset=cs.string())
+
+# Number of rows reduced to 17,735 - hmm... try other ways?
+```
+
+```{python}
+## Drop a row if all values are null
+# df_pa.filter(~pl.all_horizontal(pl.all().is_null()))
+
+# No change in number of rows - meaning no one row contains all null values
+```
+
+```{python}
+# Restricting drop nulls to a specific column
+df_dn = df_pa.drop_nulls(subset="CX LogP")
+df_dn
+
+# Number of rows reduced to 1,873,678
+```
+
+The training features that are going to be used in building the machine learning model later are "#RO5 Violations", "QED Weighted", "CX LogP", "CX LogD" and "Heavy atoms". So only the null counts for these columns will be closely observed.
+
+*please note these molecular features are selected randomly and are likely not ideal in real-life use case as this post is mainly about using Polars dataframe library with scikit_learn only*
+
+Both columns for "CX LogP" and "CX LogD" have null count of 28,141 for each, and the null count for each of the other 3 columns ("QED Weighted", "#RO5 Violations" and "Heavy atoms") is 27,922. I've chosen to use CX LogP column since it has a higher number of null counts, and later have found that these null counts do overlap within these 5 columns so after dropping all nulls in "CX LogP" column, these 5 columns should all have zero null counts.
+
+```{python}
 df_dn.null_count()
 ```
 
 ```{python}
-# To see summary statistics for df_dn dataset
+# Summary statistics for df_dn dataset
 df_dn.describe()
 ```
 
 <br>
 
 ##### **Some exploratory data analysis**
+
+**The following needs to be updated**
 
 One of the columns that jumped out from the summary statistics of the df_dn dataset was the "Targets" column. It ranged from 1 to 1334 targets. Out of curiosity, I went through several places on ChEMBL website to find out the exact definition of "Target". Eventually I settled on an answer which explained that the "Target" column represented the number of targets associated with the particular ChEMBL compound listed. I then singled out the ChEMBL compound with 1334 targets recorded, it turned out to be imatinib, which was marketed as Gleevec, and was a well-known prescription medicine for leukaemia and other selected oncological disorders with many well-documented drug interactions.
 
