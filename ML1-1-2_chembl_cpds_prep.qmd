@@ -13,6 +13,7 @@ categories:
   - ChEMBL database
   - Cheminformatics
 jupyter: python3
+bibliography: references.bib
 ---
 
 ##### **Import Polars and read parquet file**
@@ -25,12 +26,21 @@ df_pa = pl.read_parquet("chembl_sm_mols.parquet")
 df_pa
 ```
 
+```{python}
+# All max phase == 0 in this dataset!
+df_pa.group_by("Max Phase").len()
+```
+
 Now I have the small molecules dataframe, I want to find out what types of physicochemical properties are there in the dataset.
 
 ```{python}
 # Print all column names and data types 
 print(df_pa.glimpse())
 ```
+
+<br>
+
+###### "Looking at some of the physicochemical properties in the dataset"
 
 I've gone through the ChEMBL_31 schema documentation and ChEMBL database website to find out the meanings of some of the column names. The explanations for each term are adapted from ChEMBL_31 schema documentation (available as "Release notes" on the website at the time), or if definitions for certain terms are not available from the documentation, I resort to interpret them myself by going into "Dinstict compounds" section in the ChEMBL database.
 
@@ -50,7 +60,7 @@ The definitions for some of the listed physicochemical properties are:
 
 **Passes Ro3** - Indicating whether the compound passed the rule-of-three (MW \< 300, logP \< 3 etc)
 
-**QED Weighted** - Weighted quantitative estimate of drug likeness (***cite*** as defined by Bickerton *et al.*, Nature Chem 2012)
+**QED Weighted** - Weighted quantitative estimate of drug likeness [@Bickerton2012]
 
 **Inorganic flag** - Indicating whether the molecule is inorganic (i.e., containing only metal atoms and \<2 carbon atoms), where 1 = inorganic compound and -1 = not inorganic compound (assuming 0 means it is neither case or yet to be assigned)
 
@@ -68,7 +78,7 @@ The definitions for some of the listed physicochemical properties are:
 
 **Inchi Key** - the IUPAC international chemical identifier key
 
-The older version of this post has had a code section for changing the data types of several columns. I've found out that this is no longer needed as I've taken care of this in the first post when I've specifically stated the null_values (e.g. "None" and "") to be converted to "null" during `pl.read_csv()`. When the same dataframe df_pa is read here, you'll notice that the data type for each column should be how it should be, matching the data inside each column.
+The older version of this post has had a code section for changing the data types of several columns. I've found out that this is no longer needed as I've taken care of this in the first post when I've specifically stated the null_values (e.g. "None" and "") to be converted to"null" during `pl.read_csv()`. When the same dataframe df_pa is read here, you'll notice that the data type for each column should be how it should be, matching the data inside each column.
 
 <br>
 
@@ -81,90 +91,67 @@ I'm using `null_count()` to see the distributions of all null entries in the dat
 df_pa.null_count()
 ```
 
-```{python}
-df_pa
-```
-
-The following is basically a few different ways to remove the appropriate amount of null values from the original dataset.
+The following is basically several different ways to remove null values from the original dataset.
 
 ```{python}
 ## Drop all rows with null entries
-# df_dn = df_pa.drop_nulls()
-# df_dn 
+#df_pa.drop_nulls()
 
 # Number of rows reduced to 2,645 - seems way too much...
-```
 
-```{python}
 ## Restricting drop nulls to only subsets of nulls in strings
 # import polars.selectors as cs
 # df_pa.drop_nulls(subset=cs.string())
 
 # Number of rows reduced to 17,735 - hmm... try other ways?
-```
 
-```{python}
 ## Drop a row if all values are null
 # df_pa.filter(~pl.all_horizontal(pl.all().is_null()))
 
 # No change in number of rows - meaning no one row contains all null values
-```
 
-```{python}
 # Restricting drop nulls to a specific column
-df_dn = df_pa.drop_nulls(subset="CX LogP")
-df_dn
+# df_pa.drop_nulls(subset="CX LogP")
 
 # Number of rows reduced to 1,873,678
 ```
 
-The training features that are going to be used in building the machine learning model later are "#RO5 Violations", "QED Weighted", "CX LogP", "CX LogD" and "Heavy atoms". So only the null counts for these columns will be closely observed.
-
-*please note these molecular features are selected randomly and are likely not ideal in real-life use case as this post is mainly about using Polars dataframe library with scikit_learn only*
-
-Both columns for "CX LogP" and "CX LogD" have null count of 28,141 for each, and the null count for each of the other 3 columns ("QED Weighted", "#RO5 Violations" and "Heavy atoms") is 27,922. I've chosen to use CX LogP column since it has a higher number of null counts, and later have found that these null counts do overlap within these 5 columns so after dropping all nulls in "CX LogP" column, these 5 columns should all have zero null counts.
+Initially, I've tried to remove all nulls first, then I realise that removing nulls above may not be the best way to prepare the data as all max phase 4 compounds are actually also removed completely! So what I'm going to do instead is to keep them by using `fill_null()` to replace all "null" as "0" (this'll only apply to all the integers or floats in the data).
 
 ```{python}
-df_dn.null_count()
+df_pa = df_pa.fill_null(0)
+df_pa
 ```
 
 ```{python}
 # Summary statistics for df_dn dataset
-df_dn.describe()
+df_pa.describe()
 ```
 
 <br>
 
-##### **Some exploratory data analysis**
+##### **Looking at max phase and QED weighted**
 
-**The following needs to be updated**
+To explore some of the physicochemical and molecular properties in the dataframe, "Max Phase" is one of the first few that I want to have a look. Each ChEMBL compound will have a max phase number from 0 to 4 (for this particularly dataset only, you'll notice that this can start from -1 in other ChEMBL datasets), where 4 means the compound is approved (e.g. a prescription medicine).
 
-One of the columns that jumped out from the summary statistics of the df_dn dataset was the "Targets" column. It ranged from 1 to 1334 targets. Out of curiosity, I went through several places on ChEMBL website to find out the exact definition of "Target". Eventually I settled on an answer which explained that the "Target" column represented the number of targets associated with the particular ChEMBL compound listed. I then singled out the ChEMBL compound with 1334 targets recorded, it turned out to be imatinib, which was marketed as Gleevec, and was a well-known prescription medicine for leukaemia and other selected oncological disorders with many well-documented drug interactions.
+While looking at max phases, I'm thinking these compounds with max phase 0 could be a testing set for prediction of their max phase outcomes, while the max phase 4 compounds could be the training set for building a machine learning model. There are of course some obvious and potential flaws of splitting a dataset like this, please treat this as an exercise for demonstration only.
 
-```{python}
-# This was confirmed via a filter function, which brought up CHEMBL1421, or also known as dasatinib
-df_dn.filter(pl.col("Targets") == 1334)
-```
-
-To explore other physicochemical and molecular properties in the dataframe, "Max Phase" was one of the first few that drew my interests. So it tagged each ChEMBL compound with a max phase number from 0 to 4, where 4 meant the compound was approved (usually also meant it was already a prescription medicine). Thinking along this line, I thought what about those compounds that had max phase as 0, because they were the ones still pending associations with max phase numbers. By extending on this idea, this could be a good opportunity to introduce some ML to predict whether these zero max phase compounds would enter the approved max phase.
-
-Firstly, I had a look at the overall distribution of the max phase compounds in this dataframe df_dn.
+Below I'm checking that I do have max phases of molecules spanning across the entire range of 0 to 4.
 
 ```{python}
-# Interested in what types of "Max Phase" were recorded 
-# for the curated small molecules in ChEMBL database
-df_dn.groupby("Max Phase", maintain_order = True).agg(pl.count())
+## Alternative code
+# df_pa.group_by("Max Phase", maintain_order = True).agg(pl.len())
+
+df_pa.group_by("Max Phase").len()
 ```
 
-A quick groupby function showed that there were only 954 small molecules approved. Phase 3 recorded a total of 303 small molecules. For phase 2, there were 441 small molecules, followed by 239 compounds in phase 1. There were, however, a total amount of 734,633 small molecules that had zero as phase number (as per ChEMBL_31 schema documentation). Note: these figures were only for ChEMBL compounds with full documentations in the dataset (excluding entries or compounds with N/A or "" (empty) string cells).
-
-One of the other parameters I was interested in was "QED Weighted". So I went further into understanding what it meant, as the original reference was conveniently provided in the ChEMBL_31 schema documentation. The reference paper was by [Bickerton, G., Paolini, G., Besnard, J. et al. Quantifying the chemical beauty of drugs. Nature Chem 4, 90--98 (2012)](https://doi.org/10.1038/nchem.1243) (note: author's manuscript was available to view via PubMed link, the Nature Chemistry link only provided abstract with access to article via other means as stated).
-
-In short, it was a measure of druglikeness for small molecules based on the concept of desirability, which was based on a total of 8 different molecular properties. These molecular properties included molecular weight, ALogP, polar surface area, number of hydrogen bond acceptors, number of hydrogen bond donors, number of rotatable bonds, number of aromatic rings and structural alerts. Without going into too much details for this QED Weighted parameter, it was normally recorded as a number that ranged from 0 to 1, with 0 being the least druglike and 1 being the most druglike.
+One of the other parameters I'm interested in is "QED Weighted" [@Bickerton2012]. It's a measure of druglikeness for small molecules based on the concept of desirability, which is based on a total of 8 different molecular properties. These molecular properties include molecular weight, ALogP, polar surface area, number of hydrogen bond acceptors, number of hydrogen bond donors, number of rotatable bonds, number of aromatic rings and structural alerts. It's normally recorded as a number ranging from 0 to 1, where 0 is the least druglike and 1 being the most druglike.
 
 <br>
 
 ##### **Prepare dataframe prior to running machine learning model**
+
+**The following needs to be updated**
 
 Before I got too carried away with further EDA, I wanted to get started on preparing a dataframe for the ML model. A rough plan at this stage was to filter out Max Phase 4 and 0 compounds. Max phase 0 compounds were the ones that were not assigned with any max phase numbers yet, so they would be ideal for use as the testing set. Another main idea was to use "Max Phase" parameter as the target y variable for a LR model, because ultimately stakeholders would be more interested in knowing which candidate compounds had the most likely chance to reach the final approved phase during a drug discovery and development project or otherwise. This would also provide a chance to potentially reduce the amount of resources and time required in such a complex and sophisticated matter.
 
@@ -182,7 +169,7 @@ For now, I've chosen the following columns (or physicochemical parameters) to ap
 ```{python}
 # Selecting Max phase 0 small molecules with desired parameters
 df_0 = df_dn.filter(
-    (pl.col("Type") == "Small molecule") &
+    # (pl.col("Type") == "Small molecule") &
     (pl.col("Max Phase") == 0)
 ).select(["ChEMBL ID", 
           "Type", 
@@ -199,7 +186,7 @@ df_0
 ```{python}
 # Selecting Max phase 4 small molecules with desired parameters
 df_4 = df_dn.filter(
-    (pl.col("Type") == "Small molecule") &
+    # (pl.col("Type") == "Small molecule") &
     (pl.col("Max Phase") == 4)
 ).select(["ChEMBL ID", 
           "Type", 
@@ -212,6 +199,10 @@ df_4 = df_dn.filter(
         )
 df_4
 ```
+
+The training features that are going to be used in building the machine learning model later are "#RO5 Violations", "QED Weighted", "CX LogP", "CX LogD" and "Heavy atoms". So only the null counts for these columns will be closely observed.
+
+*please note these molecular features are selected randomly and are likely not ideal in real-life use case as this post is mainly about using Polars dataframe library with scikit_learn only*
 
 <br>
 
@@ -293,6 +284,3 @@ df_ml.dtypes
 # Note: exported df_ml dataframe as csv file for ML series 1.2.
 df_ml.write_csv("df_ml.csv", sep = ",")
 ```
-
-<br>
-

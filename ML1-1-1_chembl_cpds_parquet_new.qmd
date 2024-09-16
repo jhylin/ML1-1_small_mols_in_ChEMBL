@@ -25,7 +25,7 @@ Three reasons for this:
 
 1. ChEMBL file downloaded straight from website was way too large to be uploaded to GitHub (this was one of my very early posts with ChEMBL being completely new to me at the time so I downloaded the data from ChEMBL website without thinking too much, obviously there are currently other better and more reproducible ways to source ChEMBL data e.g. my more recent posts or through other ways in the literatures)
 
-    Note: GitHub blocks files larger than 100 MiB, which is in mebibytes and equivalent to 1,048,576 bytes and 1.04858 MB ([reference](https://www.ibm.com/docs/en/storage-insights?topic=overview-units-measurement-storage-data)- my very bad before as I've read "MiB" as "MB" from this [GitHub doc](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)!)
+    Note: GitHub blocks files larger than 100 MiB, which is in mebibytes and equivalent to 1,048,576 bytes or 1.04858 MB ([reference](https://www.ibm.com/docs/en/storage-insights?topic=overview-units-measurement-storage-data)) - my bad before as I've read "MiB" as "MB" from this [GitHub doc](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)!
 
 2. Polars seems to be a bit more integrated with Scikit_learn now so I'm wondering if Polars can be used with sklearn solely (i.e. not using Pandas at all)
 
@@ -114,7 +114,7 @@ df_sm.group_by("Structure Type").len()
 
 There are 5485 entries with "NONE" as "Structure Type" which means they have unknown compound structures or not recorded in either compound_structures table or protein_therapeutics table. These entries will be removed from df_sm first.
 
-Then I'm checking out the "Inorganic Flag" column to rule out all inorganic compounds and also all the unassigned compounds (i.e. unsure if they're inorganic or organic ones).
+Then I'm checking out the "Inorganic Flag" column to rule out only the unassigned compounds (i.e. unsure if they're inorganic or organic ones).
 
 ```{python}
 df_sm.group_by("Inorganic Flag").len()
@@ -136,9 +136,10 @@ df_sm.group_by("Structure Type").len()
 
 ```{python}
 # Adding in inorganic flag
-df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE") & (pl.col("Inorganic Flag") == -1 ))
+# Exclude unassigned mols only instead
+df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE") & (pl.col("Inorganic Flag") != 0 ))
 
-df_sm #1,901,819 entries
+df_sm #1,901,949 entries
 ```
 
 The next step is to save the dataframe as a parquet file.
@@ -164,9 +165,9 @@ df_sm.write_parquet(path, compression_level=22)
 | 22                | - Small molecules only               | 105.1 MB     | 1,914,881         |
 |                   | - Exclude structure type with "NONE" |              |                   |
 +-------------------+--------------------------------------+--------------+-------------------+
-| 22                | - Small molecules only               | 103.7 MB     | 1,901,819         |
+| 22                | - Small molecules only               | 103.7 MB     | 1,901,949         |
 |                   | - Exclude structure type with "NONE" |              |                   |
-|                   | - Remove inorganic compounds         |              |                   |
+|                   | - Remove unassigned compounds        |              |                   |
 +-------------------+--------------------------------------+--------------+-------------------+
 
 : Parquet file size changes without data partitions (note: original .csv file size is 664.8 MB)
@@ -186,11 +187,11 @@ df.write_parquet(
 | Compression level | Data restrictions    | File size                                   | Number of entries |
 +===================+======================+=============================================+===================+
 | default           | None                 | - using "Max Phase" as partition column     |                   |
-|                   |                      | - max phases 1-4: each < 100 MB             | 2,331,700         |
-|                   |                      | - max phase 0 > 104 MB                      |                   |
+|                   |                      | - max phase 0 > 104 MB                      | 2,331,700         |
+|                   |                      | - max phases 1-4: each < 104 MB             |                   |
 +-------------------+----------------------+---------------------------------------------+-------------------+
 | 15                | None                 | - max phase 0 > 104 MB                      | 2,331,700         |
-|                   |                      | - max phase 1-4: each < 100 MB              |                   |
+|                   |                      | - max phase 1-4: each < 104 MB              |                   |
 +-------------------+----------------------+---------------------------------------------+-------------------+
 | 20                | None                 | - similar sizes as mentioned above          | 2,331,700         |
 +-------------------+----------------------+---------------------------------------------+-------------------+
