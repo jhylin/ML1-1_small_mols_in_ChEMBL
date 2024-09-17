@@ -106,6 +106,10 @@ df_sm = df.filter((pl.col("Type") == "Small molecule"))
 df_sm #1,920,366 entries
 ```
 
+```{python}
+# df_sm.filter((pl.col("Max Phase") == 4)).describe()
+```
+
 I'm looking at "Structure Type" column next.
 
 ```{python}
@@ -117,9 +121,9 @@ There are 5485 entries with "NONE" as "Structure Type" which means they have unk
 Then I'm checking out the "Inorganic Flag" column to rule out only the unassigned compounds (i.e. unsure if they're inorganic or organic ones).
 
 ```{python}
-df_sm.group_by("Inorganic Flag").len()
+# df_sm.group_by("Inorganic Flag").len()
 
-# 13,695 as "0" - unassigned inorganic flag
+# 13,695 as "0" - not inorganic
 # 197 as "1" - inorganics
 ```
 
@@ -130,16 +134,30 @@ df_sm #1,914,881 entries
 ```
 
 ```{python}
+# df_sm.filter((pl.col("Max Phase") == 4)).describe()
+```
+
+```{python}
 # Check "NONE" entries are removed/filtered
 df_sm.group_by("Structure Type").len()
 ```
 
 ```{python}
-# Adding in inorganic flag
-# Exclude unassigned mols only instead
-df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE") & (pl.col("Inorganic Flag") != 0 ))
+df_sm.group_by("Targets").len()
+```
 
-df_sm #1,901,949 entries
+```{python}
+# Inorganic flag - not suitable actually
+# if restricting via inorganic flag, it'll rule out a lot of preclinical cpds (max phase 0) or max phase > 1 cpds with no calculated physicochemical properties...
+# Using "Targets" instead - ruling out ones with zero targets
+
+df_sm = df.filter((pl.col("Type") == "Small molecule") & (pl.col("Structure Type") != "NONE") & (pl.col("Targets") > 0 ))
+
+df_sm #1,831,560 entries
+```
+
+```{python}
+# df_sm.filter((pl.col("Max Phase") == 4)).describe()
 ```
 
 The next step is to save the dataframe as a parquet file.
@@ -165,9 +183,9 @@ df_sm.write_parquet(path, compression_level=22)
 | 22                | - Small molecules only               | 105.1 MB     | 1,914,881         |
 |                   | - Exclude structure type with "NONE" |              |                   |
 +-------------------+--------------------------------------+--------------+-------------------+
-| 22                | - Small molecules only               | 103.7 MB     | 1,901,949         |
+| 22                | - Small molecules only               | 100.4 MB     | 1,831,560         |
 |                   | - Exclude structure type with "NONE" |              |                   |
-|                   | - Remove unassigned compounds        |              |                   |
+|                   | - Remove compounds with no targets   |              |                   |
 +-------------------+--------------------------------------+--------------+-------------------+
 
 : Parquet file size changes without data partitions (note: original .csv file size is 664.8 MB)

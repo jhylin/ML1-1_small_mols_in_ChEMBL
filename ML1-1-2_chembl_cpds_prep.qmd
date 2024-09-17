@@ -27,7 +27,6 @@ df_pa
 ```
 
 ```{python}
-# All max phase == 0 in this dataset!
 df_pa.group_by("Max Phase").len()
 ```
 
@@ -62,7 +61,7 @@ The definitions for some of the listed physicochemical properties are:
 
 **QED Weighted** - Weighted quantitative estimate of drug likeness [@Bickerton2012]
 
-**Inorganic flag** - Indicating whether the molecule is inorganic (i.e., containing only metal atoms and \<2 carbon atoms), where 1 = inorganic compound and -1 = not inorganic compound (assuming 0 means it is neither case or yet to be assigned)
+**Inorganic flag** - Indicating whether the molecule is inorganic (i.e., containing only metal atoms and \<2 carbon atoms), where 1 = inorganic compound and 0 = non-inorganic compound (-1 meaning preclinical compound or not a drug)
 
 **Heavy Atoms** - Number of heavy (non-hydrogen) atoms
 
@@ -94,26 +93,26 @@ df_pa.null_count()
 The following is basically several different ways to remove null values from the original dataset.
 
 ```{python}
-## Drop all rows with null entries
+## ---Drop all rows with null entries---
 #df_pa.drop_nulls()
 
-# Number of rows reduced to 2,645 - seems way too much...
+## Number of rows reduced to 2,645 - seems way too much...
 
-## Restricting drop nulls to only subsets of nulls in strings
+## ---Restricting drop nulls to only subsets of nulls in strings ---
 # import polars.selectors as cs
 # df_pa.drop_nulls(subset=cs.string())
 
-# Number of rows reduced to 17,735 - hmm... try other ways?
+## Number of rows reduced to 17,735 - hmm... try other ways?
 
-## Drop a row if all values are null
+## ---Drop a row if all values are null---
 # df_pa.filter(~pl.all_horizontal(pl.all().is_null()))
 
-# No change in number of rows - meaning no one row contains all null values
+## No change in number of rows - meaning no one row contains all null values
 
-# Restricting drop nulls to a specific column
+## ---Restricting drop nulls to a specific column---
 # df_pa.drop_nulls(subset="CX LogP")
 
-# Number of rows reduced to 1,873,678
+## Number of rows reduced to 1,873,678
 ```
 
 Initially, I've tried to remove all nulls first, then I realise that removing nulls above may not be the best way to prepare the data as all max phase 4 compounds are actually also removed completely! So what I'm going to do instead is to keep them by using `fill_null()` to replace all "null" as "0" (this'll only apply to all the integers or floats in the data).
@@ -134,14 +133,13 @@ df_pa.describe()
 
 To explore some of the physicochemical and molecular properties in the dataframe, "Max Phase" is one of the first few that I want to have a look. Each ChEMBL compound will have a max phase number from 0 to 4 (for this particularly dataset only, you'll notice that this can start from -1 in other ChEMBL datasets), where 4 means the compound is approved (e.g. a prescription medicine).
 
-While looking at max phases, I'm thinking these compounds with max phase 0 could be a testing set for prediction of their max phase outcomes, while the max phase 4 compounds could be the training set for building a machine learning model. There are of course some obvious and potential flaws of splitting a dataset like this, please treat this as an exercise for demonstration only.
+While looking at max phases, I'm thinking these compounds with max phase 0 could be a testing set for prediction of their max phase outcomes, while the max phase 4 compounds could be the training set for building a machine learning (ML) model. There are of course some obvious and potential flaws of splitting a dataset like this, please treat this as an exercise for demonstration only.
 
 Below I'm checking that I do have max phases of molecules spanning across the entire range of 0 to 4.
 
 ```{python}
 ## Alternative code
 # df_pa.group_by("Max Phase", maintain_order = True).agg(pl.len())
-
 df_pa.group_by("Max Phase").len()
 ```
 
@@ -149,64 +147,87 @@ One of the other parameters I'm interested in is "QED Weighted" [@Bickerton2012]
 
 <br>
 
-##### **Prepare dataframe prior to running machine learning model**
+##### **Prepare data prior to running ML model**
 
-**The following needs to be updated**
+The goal of this ML model is to answer this question - which physicochemical features will be suitable to predict whether a compound will enter max phase 4 or not? 
 
-Before I got too carried away with further EDA, I wanted to get started on preparing a dataframe for the ML model. A rough plan at this stage was to filter out Max Phase 4 and 0 compounds. Max phase 0 compounds were the ones that were not assigned with any max phase numbers yet, so they would be ideal for use as the testing set. Another main idea was to use "Max Phase" parameter as the target y variable for a LR model, because ultimately stakeholders would be more interested in knowing which candidate compounds had the most likely chance to reach the final approved phase during a drug discovery and development project or otherwise. This would also provide a chance to potentially reduce the amount of resources and time required in such a complex and sophisticated matter.
+A rough plan at this stage is:
 
-The goal of this ML model was to answer this question: which physicochemical parameters would be the most suitable ones to predict whether a compound would enter max phase 4 (approved) or not? (implicitly, this might also help to predict which max phase 0 compounds would likely enter max phase 4 in the end)
+- to filter out max phase 4 and 0 compounds from the df_pa dataset
 
-I've then narrowed down the df_dn dataset to fulfill the following criteria:
+- to use "Max Phase" parameter as the target y variable for a logistic regression model because ultimately stakeholders are more likely to be interested in knowing which candidate compounds have the most likely chance to reach the final approved phase during a drug discovery project (*please bear in mind that this is of course way too simplified and not reflecting real-life scenarios...*)
 
--   Only small molecules present
--   Max phase of 0 and 4 only
+- to use "Polar Surface Area", "HBA", "HBD", "#RO5 Violations", "QED Weighted", "CX LogP", "CX LogD" and "Heavy atoms" as the training features for building the ML model (*these molecular features are selected randomly and ideally I should include more... but the first three are newly added in this updated version*)
 
-Another reason behind choosing only small molecules that had max phase of 0 and 4 was that a confusion matrix could be built in the end to see if the parameters selected would give us a reasonably good model for predicting the outcomes of these small molecules.
+- to use max phase 0 compounds as the testing set since they are the ones not assigned with any max phase category yet
 
-For now, I've chosen the following columns (or physicochemical parameters) to appear in the interim df_0 and df_4 datasets.
+- to use max phase 4 compounds as the training set since they've reached the approved phase
+
+- to build a confusion matrix in the end to see if the features selected may generate a somewhat reasonable model for predicting the outcomes of these small molecules
+
+Downsides of this plan are (there are many...):
+
+- the dataset used here will include some inorganic compounds (e.g. molecules containing metals)
+
+- the dataset is likely not very-chemically-diverse 
+
+- there are only a small number of max phase 4 compounds for model training (especially comparing with the "much larger" amount of max phase 0 compounds present)
+
+- logistic regression may not be the best choice of ML model to start off with (but I just want to find out how it works at the time and hence I'm doing it here)
+
+- other exploratory data analysis should be done really... e.g. how chemically diverse the dataset is?
+
+- this is only an exercise or demonstration-like piece so will not be taking into account of many other important aspects of drug discovery e.g. what disorders or illnesses are we targeting? (is it an experimentally validated and suitable target?) and what have been done so far in the literatures? etc.
+
+Firstly, I'm filtering out all the max phase 0 compounds and also all the max phase 4 compounds then save them in separate dataframes.
 
 ```{python}
-# Selecting Max phase 0 small molecules with desired parameters
-df_0 = df_dn.filter(
-    # (pl.col("Type") == "Small molecule") &
-    (pl.col("Max Phase") == 0)
-).select(["ChEMBL ID", 
-          "Type", 
-          "Max Phase",
-          "#RO5 Violations", 
-          "QED Weighted", 
-          "CX LogP", 
-          "CX LogD", 
-          "Heavy Atoms"]
-        )
-df_0
+# Selecting all max phase 0 molecules with their training features
+df_0 = df_pa.filter((pl.col("Max Phase") == 0)).select([
+  "ChEMBL ID", 
+  "Type", 
+  "Max Phase",
+  "Polar Surface Area",
+  "HBA",
+  "HBD",
+  "#RO5 Violations", 
+  "QED Weighted", 
+  "CX LogP", 
+  "CX LogD", 
+  "Heavy Atoms"
+  ])
+df_0  #1,826,345 mols
 ```
 
 ```{python}
-# Selecting Max phase 4 small molecules with desired parameters
-df_4 = df_dn.filter(
-    # (pl.col("Type") == "Small molecule") &
-    (pl.col("Max Phase") == 4)
-).select(["ChEMBL ID", 
-          "Type", 
-          "Max Phase",
-          "#RO5 Violations", 
-          "QED Weighted", 
-          "CX LogP", 
-          "CX LogD", 
-          "Heavy Atoms"]
-        )
-df_4
+# Selecting all max phase 4 molecules with their training features
+df_4 = df_pa.filter((pl.col("Max Phase") == 4)).select([
+      "ChEMBL ID", 
+      "Type", 
+      "Max Phase",
+      "Polar Surface Area",
+      "HBA",
+      "HBD",
+      "#RO5 Violations", 
+      "QED Weighted", 
+      "CX LogP", 
+      "CX LogD", 
+      "Heavy Atoms"
+      ])
+df_4  # 2,870 mols
 ```
 
-The training features that are going to be used in building the machine learning model later are "#RO5 Violations", "QED Weighted", "CX LogP", "CX LogD" and "Heavy atoms". So only the null counts for these columns will be closely observed.
+```{python}
+df_4.describe()
+```
 
-*please note these molecular features are selected randomly and are likely not ideal in real-life use case as this post is mainly about using Polars dataframe library with scikit_learn only*
+I have to go back to the first post at this point to change the data restriction criteria for the parquet file as I've found out in this step above that if I restrict data via inorganic flags, then it'll remove a lot of compounds with calculated physicochemical properties (because most of the ones in the data are preclinical compounds with inorganic flag of -1 or max phase 0 compounds; inorganic flag of 1 is inorganic ones and 0 should be the non-inorganic ones - I've updated its definition above too after re-checking the ChEMBL schema). For now, I'm restricting data via removing compounds with zero targets rather than via the inorganic flag, and this leaves us a set of max phase 4 compounds with their physicochemical properties calculated in ChEMBL (which is needed for training the model in the next post).
 
 <br>
 
-###### **Re-sampling via under-sampling**
+###### **Re-sampling via under-sampling - dealing with imbalanced training and test sets**
+
+**The following needs to be updated**
 
 Because of the large number of Max Phase 0 compounds present in the original dataset, I've randomly sampled about 950 small molecules from this group, so that there were similar amount of data in each group to avoid having an imbalanced dataset.
 
@@ -252,7 +273,7 @@ df_concat.groupby("Max_Phase").count()
 I then checked df_concat dataset only had small molecules to confirm what I've tried to achieve.
 
 ```{python}
-df_concat.groupby("Type").count()
+# df_concat.groupby("Type").count()
 ```
 
 So here we had the final version of the dataset, which I've renamed to df_ml to avoid confusion from the previous dataframes, before entering the ML phase.
