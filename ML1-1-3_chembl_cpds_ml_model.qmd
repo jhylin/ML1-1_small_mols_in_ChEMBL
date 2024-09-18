@@ -25,9 +25,9 @@ jupyter: python3
 ##### **Import libraries for machine learning**
 
 ```{python}
-# Install scikit-learn - an open-source ML library
-# Uncomment the line below if needing to install this library
-#!pip install -U scikit-learn
+# using magic pip to install sklearn & matplotlib (somehow venv keeps switching off in vscode...)
+# %pip install -U scikit-learn
+# %pip install matplotlib
 ```
 
 ```{python}
@@ -47,7 +47,7 @@ import numpy as np
 # Needed for dataframe in scikit-learn ML
 # Uncomment line below if requiring to install pandas
 #!pip install pandas
-import pandas as pd
+#import pandas as pd
 
 # To normalise dataset prior to running ML
 from sklearn import preprocessing
@@ -74,6 +74,9 @@ type(df_ml_pd)
 ```
 
 <br>
+
+**?try linking steps in a transformer/pipeline**
+- polars will work with transformer in sklearn (https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_4_0.html#polars-output-in-set-output)
 
 ##### **Logistic regression with *scikit-learn***
 
