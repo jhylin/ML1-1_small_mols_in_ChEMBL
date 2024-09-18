@@ -3,10 +3,8 @@ A series of Quarto markdown files (.qmd) are stored in this repository for an up
 
 ---
 
-So far as on 16/9/24:
+As on 18/9/24:
 
-* I've managed to convert the old .csv file (~660MB) into a parquet file (currently under 104MB) that can be uploaded into the repository (previously I didn't even set up a repo for this ML series so this might not be great)
-
-* I'm updating the 2nd post now, and while doing so I'm also updating 1st post as I go... (there are two versions of 1st post but eventually there should just be one - working on it)
+* I'm slowly starting on the 3rd post where scikit-learn will be used after first two posts/drafts are completed (hopefully no more big changes)
 
 * ETA: hopefully within the last quarter of the year for the first lot (i.e. ML 1-1-1 to 1-1-4) at least!
