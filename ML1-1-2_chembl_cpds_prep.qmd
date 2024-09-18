@@ -1,6 +1,6 @@
 ---
 title: Small molecules in ChEMBL database
-subtitle: Series 1.1.2 - Exploratory data analysis and preprocessing in Polars dataframe library
+subtitle: Series 1.1.2 - Preprocessing data in Polars dataframe library
 author: Jennifer HY Lin
 date: '2023-1-4'
 date-modified: last-modified
@@ -18,19 +18,21 @@ bibliography: references.bib
 
 ##### **Import Polars and read parquet file**
 
+This second post will mostly be about doing some data preprocessing for the parquet file we've saved from the first post, trying to get the data in a reasonable state before moving onto the machine learning model building and training phase. The first step is to import Polars dataframe library and then read the parquet file as a dataframe.
+
 ```{python}
 import polars as pl
-
-# read parquet file as df
 df_pa = pl.read_parquet("chembl_sm_mols.parquet")
 df_pa
 ```
+
+I'm having a look at the max phase column first to see the distribution or counts of molecules in each max phase.
 
 ```{python}
 df_pa.group_by("Max Phase").len()
 ```
 
-Now I have the small molecules dataframe, I want to find out what types of physicochemical properties are there in the dataset.
+I also want to find out what types of physicochemical properties are there in this dataset.
 
 ```{python}
 # Print all column names and data types 
@@ -39,9 +41,9 @@ print(df_pa.glimpse())
 
 <br>
 
-###### "Looking at some of the physicochemical properties in the dataset"
+###### **Looking at some of the physicochemical properties in the dataset**
 
-I've gone through the ChEMBL_31 schema documentation and ChEMBL database website to find out the meanings of some of the column names. The explanations for each term are adapted from ChEMBL_31 schema documentation (available as "Release notes" on the website at the time), or if definitions for certain terms are not available from the documentation, I resort to interpret them myself by going into "Dinstict compounds" section in the ChEMBL database.
+I've gone through the ChEMBL_31 schema documentation and ChEMBL database website to find out the meanings for some of the column names. The explanations of the selected term are adapted from ChEMBL_31 schema documentation (available as "Release notes" on the website at the time), or if definitions for certain terms are not available, I resort to interpret them myself by going into "Dinstict compounds" section of the ChEMBL database.
 
 The definitions for some of the listed physicochemical properties are:
 
@@ -131,9 +133,9 @@ df_pa.describe()
 
 ##### **Looking at max phase and QED weighted**
 
-To explore some of the physicochemical and molecular properties in the dataframe, "Max Phase" is one of the first few that I want to have a look. Each ChEMBL compound will have a max phase number from 0 to 4 (for this particularly dataset only, you'll notice that this can start from -1 in other ChEMBL datasets), where 4 means the compound is approved (e.g. a prescription medicine).
+To explore some of the physicochemical and molecular properties in the dataframe, "Max Phase" is one of the first few that I want to have a look. Each ChEMBL compound will have a max phase number from 0 to 4 (for this particular dataset only, you'll notice that this can start from -1 in other ChEMBL datasets), where 4 means the compound is approved (e.g. a prescription medicine).
 
-While looking at max phases, I'm thinking these compounds with max phase 0 could be a testing set for prediction of their max phase outcomes, while the max phase 4 compounds could be the training set for building a machine learning (ML) model. There are of course some obvious and potential flaws of splitting a dataset like this, please treat this as an exercise for demonstration only.
+While looking at max phases, I'm thinking the compounds with max phase 0 could be a testing set for prediction of their max phase outcomes, while the max phase 4 compounds could be the training set for building a machine learning (ML) model. There are of course some obvious and potential flaws of splitting a dataset like this, please treat this as an exercise for demonstration only.
 
 Below I'm checking that I do have max phases of molecules spanning across the entire range of 0 to 4.
 
@@ -149,15 +151,15 @@ One of the other parameters I'm interested in is "QED Weighted" [@Bickerton2012]
 
 ##### **Prepare data prior to running ML model**
 
-The goal of this ML model is to answer this question - which physicochemical features will be suitable to predict whether a compound will enter max phase 4 or not? 
+The goal of this ML model is to answer this question - which physicochemical features will be useful to predict whether a compound will enter max phase 4? 
 
 A rough plan at this stage is:
 
 - to filter out max phase 4 and 0 compounds from the df_pa dataset
 
-- to use "Max Phase" parameter as the target y variable for a logistic regression model because ultimately stakeholders are more likely to be interested in knowing which candidate compounds have the most likely chance to reach the final approved phase during a drug discovery project (*please bear in mind that this is of course way too simplified and not reflecting real-life scenarios...*)
+- to use "Max Phase" parameter as the target y variable for a logistic regression (LR) model because ultimately stakeholders are more likely to be interested in knowing which candidate compounds have the most likely chance to reach the final approved phase during a drug discovery project (*please bear in mind that this is of course way too simplified and not reflecting real-life scenarios...*)
 
-- to use "Polar Surface Area", "HBA", "HBD", "#RO5 Violations", "QED Weighted", "CX LogP", "CX LogD" and "Heavy atoms" as the training features for building the ML model (*these molecular features are selected randomly and ideally I should include more... but the first three are newly added in this updated version*)
+- to use "Polar Surface Area", "HBA", "HBD", "#RO5 Violations", "QED Weighted", "CX LogP", "CX LogD" and "Heavy atoms" as the training features for building the ML model (*these molecular features are selected randomly and ideally I should include more... the first three are newly added in this updated version*)
 
 - to use max phase 0 compounds as the testing set since they are the ones not assigned with any max phase category yet
 
@@ -173,7 +175,7 @@ Downsides of this plan are (there are many...):
 
 - there are only a small number of max phase 4 compounds for model training (especially comparing with the "much larger" amount of max phase 0 compounds present)
 
-- logistic regression may not be the best choice of ML model to start off with (but I just want to find out how it works at the time and hence I'm doing it here)
+- LR may not be the best choice of ML model to start off with (but I just want to find out how it works at the time and hence I'm doing it here)
 
 - other exploratory data analysis should be done really... e.g. how chemically diverse the dataset is?
 
@@ -185,7 +187,6 @@ Firstly, I'm filtering out all the max phase 0 compounds and also all the max ph
 # Selecting all max phase 0 molecules with their training features
 df_0 = df_pa.filter((pl.col("Max Phase") == 0)).select([
   "ChEMBL ID", 
-  "Type", 
   "Max Phase",
   "Polar Surface Area",
   "HBA",
@@ -203,7 +204,6 @@ df_0  #1,826,345 mols
 # Selecting all max phase 4 molecules with their training features
 df_4 = df_pa.filter((pl.col("Max Phase") == 4)).select([
       "ChEMBL ID", 
-      "Type", 
       "Max Phase",
       "Polar Surface Area",
       "HBA",
@@ -225,83 +225,82 @@ I have to go back to the first post at this point to change the data restriction
 
 <br>
 
-###### **Re-sampling via under-sampling - dealing with imbalanced training and test sets**
+###### **Re-sampling via under-sampling - dealing with imbalanced dataset**
 
-**The following needs to be updated**
+Because of the large number of max phase 0 compounds (1,826,345 molecules) and the relatively smaller number of max phase 4 compounds (2,870 molecules) present in the original dataset, I'm going to randomly sample 2800 small molecules from the max phase 0 group to balance the ratio of max phase 0 versus max phase 4 compounds. This will allow us to have a similar amount of data in each group to avoid a very imbalanced dataset.
 
-Because of the large number of Max Phase 0 compounds present in the original dataset, I've randomly sampled about 950 small molecules from this group, so that there were similar amount of data in each group to avoid having an imbalanced dataset.
+::: {.callout-note}
+For an alternative and likely a better way to deal with imbalanced datasets - please see [my later post](https://jhylin.github.io/Data_in_life_blog/posts/17_ML2-2_Random_forest/2_random_forest_classifier.html#model-building)  that attempts to use a "generalized threshold shifting" method.
+:::
 
 ```{python}
-df_s_0 = df_0.sample(n = 950, shuffle = True, seed = 0)
-df_s_0
+df_0 = df_0.sample(n = 2800, shuffle = True, seed = 0)
+df_0
 ```
 
-Since the plan was to use LR method for ML model, the y variable I was interested in was going to be a binary categorical variable - meaning it needed to be 0 (not approved) or 1 (approved). To do this, I've added a new column with a new name of "Max_Phase" and replace "4" as "1" by dividing the whole column by 4 to reach this new label.
+Since the plan is to use LR method for the ML model, the y variable I'm interested in is going to be a binary categorical variable - meaning it needs to be 0 (not approved) or 1 (approved). To do this, I'm going to add a new column with a new name of "Max_Phase" and replace "4" as "1" by dividing the whole column by 4 to reach this new label in the max phase 4 dataset.
+
+Then I'm changing the data type of "Max_Phase" from float to integer, so that the two different dataframes can be concatenated (which will only work if both are of the same data types).
 
 ```{python}
-df_4_f = df_4.with_columns((pl.col("Max Phase") / 4).alias("Max_Phase"))
-df_4_f
+df_4 = df_4.with_columns((pl.col("Max Phase") / 4).alias("Max_Phase")).cast({"Max_Phase": pl.Int64})
+df_4
 ```
 
-Then I changed the data type of "Max_Phase" from float to integer, so that the two different dataframes could be concatenated (which would only work if both were of same data types).
+I'm also going to create a new column with the same name of "Max_Phase" in the max phase 0 dataframe, so that the two dataframes can be combined.
 
 ```{python}
-df_4_f = df_4_f.with_columns((pl.col("Max_Phase")).cast(pl.Int64, strict = False))
-df_4_f
+df_0 = df_0.with_columns((pl.col("Max Phase")).alias("Max_Phase"))
+df_0
 ```
 
-Also I've created a new column with the same name of "Max_Phase" for Max phase 0 small molecules, so that the two dataframes could be combined (also needed to have exactly the same column names for it to work).
+Then I'm combining df_0 (dataframe with max phase 0 compounds) and df_4 (dataframe with max phase 4 compounds).
 
 ```{python}
-df_s_0_f = df_s_0.with_columns((pl.col("Max Phase")).alias("Max_Phase"))
-df_s_0_f
+df_concat = pl.concat([df_0, df_4])
+df_concat
 ```
 
-Then I combined df_s\_0_f (dataframe with max phase 0 compounds) and df_4\_f (dataframe with max phase 4 compounds).
+This df_concat dataset is checked to see if it has all compounds in max phases 0 and 4 only. 
+
+Note: max phase 4 (approved) compounds are re-labelled as Max_Phase = 1.
 
 ```{python}
-df_concat = pl.concat([df_s_0_f, df_4_f], how = "vertical",)
-print(df_concat)
+df_concat.group_by("Max_Phase").len()
 ```
 
-This df_concat dataset was checked to see it had all compounds in Max Phase 0 and 4 only. Note: Max Phase 4 (approved) compounds were re-labelled as Max_Phase = 1.
+So here we have the final version of the dataset, renamed to df_ml to avoid confusion from the previous dataframes, before entering the ML phase.
 
 ```{python}
-df_concat.groupby("Max_Phase").count()
-```
-
-I then checked df_concat dataset only had small molecules to confirm what I've tried to achieve.
-
-```{python}
-# df_concat.groupby("Type").count()
-```
-
-So here we had the final version of the dataset, which I've renamed to df_ml to avoid confusion from the previous dataframes, before entering the ML phase.
-
-```{python}
-# Leave out ChEMBL ID and Type
-df_ml = df_concat.select(["Max_Phase", 
-                          "#RO5 Violations", 
-                          "QED Weighted", 
-                          "CX LogP", 
-                          "CX LogD", 
-                          "Heavy Atoms"]
-                        )
+df_ml = df_concat.select([
+  "Max_Phase", 
+  "Polar Surface Area",
+  "HBA",
+  "HBD",
+  "#RO5 Violations", 
+  "QED Weighted", 
+  "CX LogP", 
+  "CX LogD", 
+  "Heavy Atoms"
+  ])
 df_ml
 ```
 
+I'm just checking for any nulls in the final dataset (should be none as I've filled all nulls in one of the steps above).
+
 ```{python}
-# Check for any nulls in the dataset
 df_ml.null_count()
 ```
 
+Also, I'm checking the data types in df_ml dataset to make sure they're all integers or floats for Scikit-learn algorithms to work.
+
 ```{python}
-# Check data types in df_ml dataset
-# Needed to be integers or floats for scikit-learn algorithms to work
+# also shown in the dataframe below the column names
 df_ml.dtypes
 ```
 
-``` {{python}}
-# Note: exported df_ml dataframe as csv file for ML series 1.2.
-df_ml.write_csv("df_ml.csv", sep = ",")
+Then finally I'm saving this tidied dataset as a separate .csv file for use in the next post.
+
+``` {python}
+df_ml.write_csv("df_ml.csv", separator = ",")
 ```
