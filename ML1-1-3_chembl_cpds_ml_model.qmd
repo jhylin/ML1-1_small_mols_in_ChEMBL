@@ -16,92 +16,71 @@ categories:
 jupyter: python3
 ---
 
-**Plan**
-
-*Try to see if Polars can be used with sklearn completely for building ML model*
-
-<br>
-
-##### **Import libraries for machine learning**
+##### **Import libraries**
 
 ```{python}
-# using magic pip to install sklearn & matplotlib (somehow venv keeps switching off in vscode...)
+## using magic pip to install sklearn & matplotlib (somehow venv keeps switching off in vscode...)
 # %pip install -U scikit-learn
 # %pip install matplotlib
-```
 
-```{python}
-# Import scikit-learn
+
 import sklearn
-
-# Check version of scikit-learn 
-print(sklearn.__version__)
-```
-
-Other libraries needed to generate ML model were imported as below.
-
-```{python}
-# To use NumPy arrays to prepare X & y variables
-import numpy as np
-
-# Needed for dataframe in scikit-learn ML
-# Uncomment line below if requiring to install pandas
-#!pip install pandas
-#import pandas as pd
-
-# To normalise dataset prior to running ML
+print(f"scikit-learn version used is: {sklearn.__version__}")
 from sklearn import preprocessing
-# To split dataset into training & testing sets
 from sklearn.model_selection import train_test_split
-
-# For data visualisations
-# Uncomment line below if requiring to install matplotlib
-#!pip install matplotlib
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+import polars as pl
+import numpy as np
 import matplotlib.pyplot as plt
 ```
 
-I've then installed pyarrow, to convert Polars dataframe into a Pandas dataframe, which was needed to run *scikit-learn*.
+---old way using pandas---
 
 ```{python}
+# I've then installed pyarrow, to convert Polars dataframe into a Pandas dataframe, which was needed to run *scikit-learn*.
+
 # Uncomment line below to install pyarrow
 #!pip install pyarrow
+
+# Convert Polars df to Pandas df 
+# df_ml_pd = df_ml.to_pandas()
+# type(df_ml_pd)
 ```
+
+---new way using polars---
 
 ```{python}
-# Convert Polars df to Pandas df 
-df_ml_pd = df_ml.to_pandas()
-type(df_ml_pd)
+df = pl.read_csv("df_ml.csv")
+df
 ```
 
-<br>
+**work-in-progress for below**
 
-**?try linking steps in a transformer/pipeline**
-- polars will work with transformer in sklearn (https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_4_0.html#polars-output-in-set-output)
+*Try using Polars with sklearn completely & linking steps in a pipeline*
+
+* change to polars df under set_ouput for pipeline 
+- this generates polars df as output (rather than the numbers in strings)
+- https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.set_output
 
 ##### **Logistic regression with *scikit-learn***
 
-LR was one of the supervised methods in statistical ML realm. As the term "supervised" suggested, this type of ML was purely data-driven to allow computers to learn patterns from input data with known outcomes, in order to predict new outcomes on novel data.
+Logistic regression (LR) is one of the supervised methods in the statistical machine learning (ML) area. As the term "supervised" suggests, this type of ML is purely data-driven to allow computers to learn patterns from the input data with known outcomes in order to predict the same target outcomes for a different set of data that is previously unseen by the computer.
 
-<br>
-
-###### **Defining X and y variables**
+###### **Define X and y variables**
 
 ```{python}
-# Define X variables from df_ml_pd dataset
-X = np.asarray(df_ml_pd[["#RO5 Violations", 
-                         "QED Weighted", 
-                         "CX LogP", 
-                         "CX LogD", 
-                         "Heavy Atoms"]]
-              )
-X[0:5]
+# Define X variables from df dataset
+mol_feat = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
+X = np.asarray(mol_feat)
+X
 ```
 
 ```{python}
 # Define y variable
-# Note to use "Max_Phase", not the original "Max Phase"
-y = np.asarray(df_ml_pd["Max_Phase"])
-y[0:5]
+y = np.asarray(df["Max_Phase"])
+y
 ```
 
 <br>
@@ -114,8 +93,7 @@ y[0:5]
 # Random number generator
 #rng = np.random.RandomState(0) - note: this may produce different result each time
 
-# Edited post to use random_state = 250 to show comparison with ML series 1.2
-# for reproducible result
+# Edited post to use random_state = 250 to show comparison with ML series 1.2 for reproducible result
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 250)
 print('Training set:', X_train.shape, y_train.shape)
 print('Testing set:', X_test.shape, y_test.shape)
@@ -123,82 +101,126 @@ print('Testing set:', X_test.shape, y_test.shape)
 
 <br>
 
-###### **Preprocessing data**
+**Preprocessing data**
 
 ```{python}
 # Normalise & clean the dataset
 # Fit on the training set - not on testing set as this might lead to data leakage
 # Transform on the testing set
-X = preprocessing.StandardScaler().fit(X_train).transform(X_test)
-X[0:5]
+
+# X = preprocessing.StandardScaler().fit(X_train).transform(X_test)
+# X
+#X[0:5]
 ```
 
-<br>
-
-###### **Fitting LR classifier on training set**
+**Fitting LR classifier on training set**
 
 ```{python}
-# Import logistic regression 
-from sklearn.linear_model import LogisticRegression
 # Create an instance of logistic regression classifier and fit the data
-LogR = LogisticRegression().fit(X_train, y_train)
-LogR
+# LogR = LogisticRegression().fit(X_train, y_train)
+# LogR
 ```
 
-<br>
-
-###### **Applying LR classifier on testing set for prediction**
+**Applying LR classifier on testing set for prediction**
 
 ```{python}
-y_mp = LogR.predict(X_test)
-y_mp
+# y_mp = LogR.predict(X_test)
+# y_mp
 ```
 
 <br>
 
-###### **Converting predicted values into a dataframe**
+###### **Pipeline method**
+
+Some possible benefits of using pipeline:
+
+- chaining preprocessing step with different estimators in one go where we only have to call fit and predict once on our data 
+
+- avoiding data leakage from the testing set into the training set by making sure the same set of samples is used to train the transformers and predictors 
+
+- avoiding the possibility of missing out on the transformation step (**check**)
+
+The example below uses the function of `make_pipeline()`, which takes in a preprocessing standard data scaler and also a LR estimator and then constructs a pipeline based on them.
+
+```{python}
+## Pipeline:
+
+params_lr = {
+  # solver for large dataset
+  "solver": "saga",
+  "random_state": 250
+}
+
+LR = make_pipeline(
+  # Preprocess/normalise the dataset
+  StandardScaler(), 
+  # Create an instance of LR classifier 
+  LogisticRegression(**params_lr),
+  )
+
+LR.fit(X_train, y_train)
+LR.predict(X_test)
+
+# Need to figure out how to best use set_output for polars 
+# ?should I use it as it'll generate result in df
+#LR.set_output(transform="polars")
+```
+
+```{{python}}
+## My example of a make_pipeline() used previously - note: this uses scikit_mol
+
+Set parameters for xgboost model
+params_xgboost = {
+    "n_estimators": 100,
+    "max_depth": 3,
+    # For multi-class classification, use softprob for loss function (learning task parameters)
+    # source: https://xgboost.readthedocs.io/en/latest/parameter.html#learning-task-parameters
+    "objective": 'multi:softprob', 
+    "learning_rate": 0.1, 
+    "subsample": 0.5, 
+    "random_state": 2
+    }
+
+Building XGBoostClassifier pipeline
+mlpipe_xgb = make_pipeline(
+    # Convert SMILES to RDKit molecules
+    SmilesToMolTransformer(), 
+    # Molecule standardisations
+    Standardizer(),
+    ## A choice of using either Morgan fingerprints  or RDKit 2D descriptors:
+    # Generate MorganFingerprintTransformer()
+    MorganFingerprintTransformer(useFeatures=True),
+    # Generate RDKit2D descriptors
+    #MolecularDescriptorTransformer(**params_rdkit2d),
+    # Scale variances in descriptor data
+    StandardScaler(),
+    # XGBoost classifier
+    XGBClassifier(**params_xgboost)
+)
+```
+
+**Converting predicted probabilities into a dataframe**
+
+```{python}
+# Use describe() to show distributions
+# y_mp_prob = pd.DataFrame(y_mp_proba)
+# y_mp_prob.describe()
+```
+
+
+**Converting predicted values into a dataframe**
 
 ```{python}
 # Predicted values were based on log odds
 # Use describe() method to get characteristics of the distribution
-pred = pd.DataFrame(LogR.predict_log_proba(X))
-pred.describe()
+# pred = pd.DataFrame(LogR.predict_log_proba(X))
+# pred.describe()
 ```
 
 Alternatively, a quicker way to get predicted probabilities was via predict_proba() method in *scikit-learn*.
 
 ```{python}
-y_mp_proba = LogR.predict_proba(X_test)
+# y_mp_proba = LogR.predict_proba(X_test)
 # Uncomment below to see the predicted probabilities printed
 #print(y_mp_proba)
 ```
-
-<br>
-
-###### **Converting predicted probabilities into a dataframe**
-
-```{python}
-# Use describe() to show distributions
-y_mp_prob = pd.DataFrame(y_mp_proba)
-y_mp_prob.describe()
-```
-
-<br>
-
-###### **Pipeline method for LR**
-
-This was something I thought to try when I was reading through *scikit-learn* documentation. One major advantage of using pipeline was that it was designed to chain all the estimators used for ML. The benefit of this was that we only had to call fit and predict once in our data to fit the whole chain of estimators. The other useful thing was that this could avoid data leakage from our testing set into the training set by making sure the same set of samples were used to train the transformers and predictors. One other key thing it also helped was that it also avoided the possibility of missing out on the transformation step.
-
-The example below used the function of make_pipeline, which took in a number of estimators as inputted, and then constructed a pipeline based on them.
-
-```{python}
-# Test pipline from scikit-Learn
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-
-LR = make_pipeline(StandardScaler(), LogisticRegression())
-LR.fit(X_train, y_train)
-```
-
-<br>
-
