@@ -28,11 +28,11 @@ This post will need the following libraries to build and train a logistic regres
 
 import sklearn
 print(f"scikit-learn version used is: {sklearn.__version__}")
-from sklearn import preprocessing
+from sklearn import preprocessing, set_config
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline, Pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler
 import polars as pl
 import matplotlib.pyplot as plt
 ```
@@ -52,7 +52,7 @@ Logistic regression (LR) is one of the supervised methods in the statistical mac
 
 ###### **Define X and y variables**
 
-I'm using the `to_numpy()` directly in polars to convert data in the dataframe into Numpy arrays (saves from importing Numpy first and then converting into ndarrays).
+*not need to use to_numpy() as there's transform step included in LR estimator when being used in pipeline*
 
 ```{python}
 # Define X variables
@@ -61,17 +61,9 @@ X
 ```
 
 ```{python}
-# df.columns[1:]
-```
-
-```{python}
 # X_features = df.columns
 # feat_names = pl.Series("feat_names", df.columns[1:])
 # feat_names
-```
-
-```{python}
-# type(feat_names)
 ```
 
 ```{python}
@@ -107,12 +99,7 @@ Some benefits of using pipeline ([scikit_learn reference](https://scikit-learn.o
 
 - avoiding missing out on the transformation step (note: calling `fit()` on pipeline is equivalent to calling `fit()` on each estimator and `transform()` input data before the next step)
 
-The example below uses the function of `make_pipeline()` to construct a pipeline that takes in a standard scaler to scale data and also a LR estimator.
-
-**work-in-progress for below**
-
-* An example re. polars df with set_ouput for pipeline - this generates polars df as output 
-- https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.set_output
+The example below uses `Pipeline()` to construct a pipeline that takes in a standard scaler to scale data and also a LR estimator, along with some parameters.
 
 ```{python}
 # Tried the following with pipeline - didn't work as well as expected
@@ -130,20 +117,19 @@ The example below uses the function of `make_pipeline()` to construct a pipeline
 ```{python}
 ## Pipeline:
 
-from sklearn import set_config
 set_config(transform_output="polars")
 
-# params_lr = {
-#   # solver for large dataset
-#   "solver": "saga",
-#   "random_state": 250
-# }
+params_lr = {
+  # solver for large dataset
+  "solver": "saga",
+  "random_state": 50
+}
 
 LR = Pipeline(steps=[
-  # Preprocess/normalise the dataset
+  # Preprocess/scale the dataset
   ("StandardScaler", StandardScaler().set_output(transform="polars")), 
   # Create an instance of LR classifier 
-  ("LogR", LogisticRegression()) #**params_lr
+  ("LogR", LogisticRegression(**params_lr))
 ]
   )
 
@@ -159,27 +145,16 @@ LR.score(X_test, y_test)
 # Initial issue is the feature names are only shown as x0, x1, x2... not useful
 # Likely because all the mol features are not in strings (either i64 or f64, so the feature names are not shown)
 
-
-log_reg = LR[-1]
-log_reg
-```
-
-```{python}
-# type(log_reg)
-# sklearn.linear_model._logistic.LogisticRegression
-```
-
-```{python}
 # The other way to get features names is from pipeline only
 # requires to save df column names separately as an array
 # LR[:-1].get_feature_names_out(feat_names)
 
 # the above pipeline works to show feature names - appears to need to set_output in 3 places - outside pipeline twice and inside pipeline once (for standard scaler part)
-log_reg.feature_names_in_
 ```
 
 ```{python}
-log_reg.coef_
+log_reg = LR[-1]
+log_reg
 ```
 
 ```{python}
@@ -187,6 +162,8 @@ log_reg.coef_
 lr_feat = pl.Series(log_reg.feature_names_in_).to_frame()
 lr_feat
 ```
+
+**TODO**
 
 ```{python}
 # Need to un-pivot the dataframe
@@ -200,63 +177,27 @@ lr_coef
 ```
 
 
-```{{python}}
-## My example of a make_pipeline() used previously - note: this uses scikit_mol
-
-Set parameters for xgboost model
-params_xgboost = {
-    "n_estimators": 100,
-    "max_depth": 3,
-    # For multi-class classification, use softprob for loss function (learning task parameters)
-    # source: https://xgboost.readthedocs.io/en/latest/parameter.html#learning-task-parameters
-    "objective": 'multi:softprob', 
-    "learning_rate": 0.1, 
-    "subsample": 0.5, 
-    "random_state": 2
-    }
-
-Building XGBoostClassifier pipeline
-mlpipe_xgb = make_pipeline(
-    # Convert SMILES to RDKit molecules
-    SmilesToMolTransformer(), 
-    # Molecule standardisations
-    Standardizer(),
-    ## A choice of using either Morgan fingerprints  or RDKit 2D descriptors:
-    # Generate MorganFingerprintTransformer()
-    MorganFingerprintTransformer(useFeatures=True),
-    # Generate RDKit2D descriptors
-    #MolecularDescriptorTransformer(**params_rdkit2d),
-    # Scale variances in descriptor data
-    StandardScaler(),
-    # XGBoost classifier
-    XGBClassifier(**params_xgboost)
-)
-```
-
-
-
-**Converting predicted probabilities into a dataframe**
-
-```{python}
-# Use describe() to show distributions
-# y_mp_prob = pd.DataFrame(y_mp_proba)
-# y_mp_prob.describe()
-```
-
+*All needed below?*
 
 **Converting predicted values into a dataframe**
 
 ```{python}
 # Predicted values were based on log odds
-# Use describe() method to get characteristics of the distribution
-# pred = pd.DataFrame(LogR.predict_log_proba(X))
-# pred.describe()
+# Use describe() to get stats
+pred = pl.DataFrame(LR.predict_log_proba(X))
+pred.describe()
 ```
 
-Alternatively, a quicker way to get predicted probabilities was via predict_proba() method in *scikit-learn*.
+Alternatively, a quicker way to get predicted probabilities is via predict_proba() method in *scikit-learn*.
 
 ```{python}
-# y_mp_proba = LogR.predict_proba(X_test)
-# Uncomment below to see the predicted probabilities printed
-#print(y_mp_proba)
+y_mp_proba = LR.predict_proba(X_test)
+print(y_mp_proba)
+```
+
+**Converting predicted probabilities into a dataframe**
+
+```{python}
+y_mp_prob = pl.DataFrame(y_mp_proba)
+y_mp_prob.describe()
 ```

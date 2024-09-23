@@ -3,8 +3,8 @@ A series of Quarto markdown files (.qmd) are stored in this repository for an up
 
 ---
 
-As on 18/9/24:
+As on 23/9/24:
 
-* I'm slowly starting on the 3rd post where scikit-learn will be used after first two posts/drafts are completed (hopefully no more big changes)
+* Managed to use set_output(transformation="polars") and set_config(transformation="polars") in the pipeline for 3rd post - pending a plot between feature names and coefficients and also some checks needed on predicted probabilities
 
 * ETA: hopefully within the last quarter of the year for the first lot (i.e. ML 1-1-1 to 1-1-4) at least!
