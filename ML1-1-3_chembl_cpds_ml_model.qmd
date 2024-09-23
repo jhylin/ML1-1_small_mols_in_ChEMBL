@@ -32,7 +32,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 import polars as pl
-import numpy as np
 import matplotlib.pyplot as plt
 ```
 
@@ -56,14 +55,6 @@ df = pl.read_csv("df_ml.csv")
 df
 ```
 
-**work-in-progress for below**
-
-*Try using Polars with sklearn completely & linking steps in a pipeline*
-
-* change to polars df under set_ouput for pipeline 
-- this generates polars df as output (rather than the numbers in strings)
-- https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.set_output
-
 ##### **Logistic regression with *scikit-learn***
 
 Logistic regression (LR) is one of the supervised methods in the statistical machine learning (ML) area. As the term "supervised" suggests, this type of ML is purely data-driven to allow computers to learn patterns from the input data with known outcomes in order to predict the same target outcomes for a different set of data that is previously unseen by the computer.
@@ -72,99 +63,128 @@ Logistic regression (LR) is one of the supervised methods in the statistical mac
 
 ```{python}
 # Define X variables from df dataset
-mol_feat = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
-X = np.asarray(mol_feat)
+X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"].to_numpy()
 X
 ```
 
 ```{python}
 # Define y variable
-y = np.asarray(df["Max_Phase"])
+y = df["Max_Phase"].to_numpy()
 y
 ```
 
 <br>
 
-###### **Training and testing sets**
+###### **Prepare training and testing sets**
+
+The dataset is splitted into training and testing sets.
 
 ```{python}
-# Split dataset into training & testing sets
-
-# Random number generator
+## Random number generator
 #rng = np.random.RandomState(0) - note: this may produce different result each time
 
-# Edited post to use random_state = 250 to show comparison with ML series 1.2 for reproducible result
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 250)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 50)
 print('Training set:', X_train.shape, y_train.shape)
 print('Testing set:', X_test.shape, y_test.shape)
 ```
 
 <br>
 
-**Preprocessing data**
-
-```{python}
-# Normalise & clean the dataset
-# Fit on the training set - not on testing set as this might lead to data leakage
-# Transform on the testing set
-
-# X = preprocessing.StandardScaler().fit(X_train).transform(X_test)
-# X
-#X[0:5]
-```
-
-**Fitting LR classifier on training set**
-
-```{python}
-# Create an instance of logistic regression classifier and fit the data
-# LogR = LogisticRegression().fit(X_train, y_train)
-# LogR
-```
-
-**Applying LR classifier on testing set for prediction**
-
-```{python}
-# y_mp = LogR.predict(X_test)
-# y_mp
-```
-
-<br>
-
 ###### **Pipeline method**
 
-Some possible benefits of using pipeline:
+Some benefits of using pipeline ([scikit_learn reference](https://scikit-learn.org/stable/modules/compose.html#pipeline-chaining-estimators)):
 
 - chaining preprocessing step with different estimators in one go where we only have to call fit and predict once on our data 
 
 - avoiding data leakage from the testing set into the training set by making sure the same set of samples is used to train the transformers and predictors 
 
-- avoiding the possibility of missing out on the transformation step (**check**)
+- avoiding missing out on the transformation step (note: calling `fit()` on pipeline is equivalent to calling `fit()` on each estimator and `transform()` input data before the next step)
 
-The example below uses the function of `make_pipeline()`, which takes in a preprocessing standard data scaler and also a LR estimator and then constructs a pipeline based on them.
+The example below uses the function of `make_pipeline()` to construct a pipeline that takes in a standard scaler to scale data and also a LR estimator.
+
+**work-in-progress for below**
+
+```{python}
+# set_output() example in polars from sklearn
+
+import polars as pl
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+
+df = pl.DataFrame(
+    {"height": [120, 140, 150, 110, 100], "pet": ["dog", "cat", "dog", "cat", "cat"]}
+)
+preprocessor = ColumnTransformer(
+    [
+        ("numerical", StandardScaler(), ["height"]),
+        ("categorical", OneHotEncoder(sparse_output=False), ["pet"]),
+    ],
+    verbose_feature_names_out=False,
+)
+preprocessor.set_output(transform="polars")
+
+df_out = preprocessor.fit_transform(df)
+df_out
+```
+
+* Another example re. polars df with set_ouput for pipeline - this generates polars df as output 
+- https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.set_output
 
 ```{python}
 ## Pipeline:
+from sklearn import set_config
+set_config(transform_output="polars")
 
-params_lr = {
-  # solver for large dataset
-  "solver": "saga",
-  "random_state": 250
-}
+## Likely need to use a columntransformer (in order to show feature names) - https://scikit-learn.org/stable/modules/generated/sklearn.compose.ColumnTransformer.html
+
+# params_lr = {
+#   # solver for large dataset
+#   "solver": "saga",
+#   "random_state": 250
+# }
 
 LR = make_pipeline(
   # Preprocess/normalise the dataset
-  StandardScaler(), 
+  StandardScaler().set_output(transform="polars"), 
   # Create an instance of LR classifier 
-  LogisticRegression(**params_lr),
+  LogisticRegression(), #**params_lr
   )
 
 LR.fit(X_train, y_train)
 LR.predict(X_test)
-
-# Need to figure out how to best use set_output for polars 
-# ?should I use it as it'll generate result in df
-#LR.set_output(transform="polars")
+#LR.score(X_test, y_test)
 ```
+
+```{python}
+# Figuring out how to best use set_output in polars 
+# So far, best use case is to show the feature_names_in_ along with coef_ 
+# issue is the feature names are only shown as x0, x1, x2... not useful
+
+log_reg = LR[-1]
+log_reg
+```
+
+```{python}
+type(log_reg)
+# sklearn.linear_model._logistic.LogisticRegression
+```
+
+```{python}
+# Likely because all the mol features are not in strings (either i64 or f64, so the feature names are not shown)
+log_reg.feature_names_in_
+```
+
+```{python}
+# Save array as df
+lr = pl.Series(log_reg.feature_names_in_).to_frame()
+lr
+```
+
+```{python}
+log_reg.coef_
+```
+
 
 ```{{python}}
 ## My example of a make_pipeline() used previously - note: this uses scikit_mol
@@ -198,6 +218,8 @@ mlpipe_xgb = make_pipeline(
     XGBClassifier(**params_xgboost)
 )
 ```
+
+
 
 **Converting predicted probabilities into a dataframe**
 
