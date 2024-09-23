@@ -18,6 +18,8 @@ jupyter: python3
 
 ##### **Import libraries**
 
+This post will need the following libraries to build and train a logistic regression model before using the model to predict max phase outcome on a testing dataset in scikit_learn.
+
 ```{python}
 ## using magic pip to install sklearn & matplotlib (somehow venv keeps switching off in vscode...)
 # %pip install -U scikit-learn
@@ -29,31 +31,20 @@ print(f"scikit-learn version used is: {sklearn.__version__}")
 from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline, Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 import polars as pl
 import matplotlib.pyplot as plt
 ```
 
----old way using pandas---
-
-```{python}
-# I've then installed pyarrow, to convert Polars dataframe into a Pandas dataframe, which was needed to run *scikit-learn*.
-
-# Uncomment line below to install pyarrow
-#!pip install pyarrow
-
-# Convert Polars df to Pandas df 
-# df_ml_pd = df_ml.to_pandas()
-# type(df_ml_pd)
-```
-
----new way using polars---
+The same set of data saved in the previous post will be read here using polars dataframe library.
 
 ```{python}
 df = pl.read_csv("df_ml.csv")
 df
 ```
+
+<br>
 
 ##### **Logistic regression with *scikit-learn***
 
@@ -61,15 +52,31 @@ Logistic regression (LR) is one of the supervised methods in the statistical mac
 
 ###### **Define X and y variables**
 
+I'm using the `to_numpy()` directly in polars to convert data in the dataframe into Numpy arrays (saves from importing Numpy first and then converting into ndarrays).
+
 ```{python}
-# Define X variables from df dataset
-X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"].to_numpy()
+# Define X variables
+X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]#.to_numpy()
 X
 ```
 
 ```{python}
+# df.columns[1:]
+```
+
+```{python}
+# X_features = df.columns
+# feat_names = pl.Series("feat_names", df.columns[1:])
+# feat_names
+```
+
+```{python}
+# type(feat_names)
+```
+
+```{python}
 # Define y variable
-y = df["Max_Phase"].to_numpy()
+y = df["Max_Phase"]#.to_numpy()
 y
 ```
 
@@ -104,39 +111,27 @@ The example below uses the function of `make_pipeline()` to construct a pipeline
 
 **work-in-progress for below**
 
-```{python}
-# set_output() example in polars from sklearn
-
-import polars as pl
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
-
-df = pl.DataFrame(
-    {"height": [120, 140, 150, 110, 100], "pet": ["dog", "cat", "dog", "cat", "cat"]}
-)
-preprocessor = ColumnTransformer(
-    [
-        ("numerical", StandardScaler(), ["height"]),
-        ("categorical", OneHotEncoder(sparse_output=False), ["pet"]),
-    ],
-    verbose_feature_names_out=False,
-)
-preprocessor.set_output(transform="polars")
-
-df_out = preprocessor.fit_transform(df)
-df_out
-```
-
-* Another example re. polars df with set_ouput for pipeline - this generates polars df as output 
+* An example re. polars df with set_ouput for pipeline - this generates polars df as output 
 - https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.set_output
 
 ```{python}
-## Pipeline:
-from sklearn import set_config
-set_config(transform_output="polars")
+# Tried the following with pipeline - didn't work as well as expected
 
 ## Likely need to use a columntransformer (in order to show feature names) - https://scikit-learn.org/stable/modules/generated/sklearn.compose.ColumnTransformer.html
+# from sklearn.compose import ColumnTransformer
+# num_cols = ["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
+# ct = ColumnTransformer(
+#     ("numerical", num_cols),
+#     verbose_feature_names_out=False,
+#   )
+# ct.set_output(transform="polars")
+```
+
+```{python}
+## Pipeline:
+
+from sklearn import set_config
+set_config(transform_output="polars")
 
 # params_lr = {
 #   # solver for large dataset
@@ -144,45 +139,64 @@ set_config(transform_output="polars")
 #   "random_state": 250
 # }
 
-LR = make_pipeline(
+LR = Pipeline(steps=[
   # Preprocess/normalise the dataset
-  StandardScaler().set_output(transform="polars"), 
+  ("StandardScaler", StandardScaler().set_output(transform="polars")), 
   # Create an instance of LR classifier 
-  LogisticRegression(), #**params_lr
+  ("LogR", LogisticRegression()) #**params_lr
+]
   )
 
+LR.set_output(transform="polars")
 LR.fit(X_train, y_train)
 LR.predict(X_test)
-#LR.score(X_test, y_test)
+LR.score(X_test, y_test)
 ```
 
 ```{python}
 # Figuring out how to best use set_output in polars 
 # So far, best use case is to show the feature_names_in_ along with coef_ 
-# issue is the feature names are only shown as x0, x1, x2... not useful
+# Initial issue is the feature names are only shown as x0, x1, x2... not useful
+# Likely because all the mol features are not in strings (either i64 or f64, so the feature names are not shown)
+
 
 log_reg = LR[-1]
 log_reg
 ```
 
 ```{python}
-type(log_reg)
+# type(log_reg)
 # sklearn.linear_model._logistic.LogisticRegression
 ```
 
 ```{python}
-# Likely because all the mol features are not in strings (either i64 or f64, so the feature names are not shown)
+# The other way to get features names is from pipeline only
+# requires to save df column names separately as an array
+# LR[:-1].get_feature_names_out(feat_names)
+
+# the above pipeline works to show feature names - appears to need to set_output in 3 places - outside pipeline twice and inside pipeline once (for standard scaler part)
 log_reg.feature_names_in_
 ```
 
 ```{python}
-# Save array as df
-lr = pl.Series(log_reg.feature_names_in_).to_frame()
-lr
+log_reg.coef_
 ```
 
 ```{python}
-log_reg.coef_
+# Save array as df
+lr_feat = pl.Series(log_reg.feature_names_in_).to_frame()
+lr_feat
+```
+
+```{python}
+# Need to un-pivot the dataframe
+lr_coef = pl.Series(log_reg.coef_).to_frame()
+lr_coef
+```
+
+```{python}
+# Can plot feature names with coefficients
+
 ```
 
 
