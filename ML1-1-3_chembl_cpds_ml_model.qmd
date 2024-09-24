@@ -23,7 +23,8 @@ This post will need the following libraries to build and train a logistic regres
 ```{python}
 ## using magic pip to install sklearn & matplotlib (somehow venv keeps switching off in vscode...)
 # %pip install -U scikit-learn
-# %pip install matplotlib
+# %pip install altair
+# %pip install matplotlib (likely not going to use)
 
 
 import sklearn
@@ -58,12 +59,6 @@ Logistic regression (LR) is one of the supervised methods in the statistical mac
 # Define X variables
 X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]#.to_numpy()
 X
-```
-
-```{python}
-# X_features = df.columns
-# feat_names = pl.Series("feat_names", df.columns[1:])
-# feat_names
 ```
 
 ```{python}
@@ -102,19 +97,6 @@ Some benefits of using pipeline ([scikit_learn reference](https://scikit-learn.o
 The example below uses `Pipeline()` to construct a pipeline that takes in a standard scaler to scale data and also a LR estimator, along with some parameters.
 
 ```{python}
-# Tried the following with pipeline - didn't work as well as expected
-
-## Likely need to use a columntransformer (in order to show feature names) - https://scikit-learn.org/stable/modules/generated/sklearn.compose.ColumnTransformer.html
-# from sklearn.compose import ColumnTransformer
-# num_cols = ["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
-# ct = ColumnTransformer(
-#     ("numerical", num_cols),
-#     verbose_feature_names_out=False,
-#   )
-# ct.set_output(transform="polars")
-```
-
-```{python}
 ## Pipeline:
 
 set_config(transform_output="polars")
@@ -130,8 +112,7 @@ LR = Pipeline(steps=[
   ("StandardScaler", StandardScaler().set_output(transform="polars")), 
   # Create an instance of LR classifier 
   ("LogR", LogisticRegression(**params_lr))
-]
-  )
+  ])
 
 LR.set_output(transform="polars")
 LR.fit(X_train, y_train)
@@ -145,12 +126,27 @@ LR.score(X_test, y_test)
 # Initial issue is the feature names are only shown as x0, x1, x2... not useful
 # Likely because all the mol features are not in strings (either i64 or f64, so the feature names are not shown)
 
+## Tried the following with pipeline to get polars df output - didn't work as well as expected
+## Likely need to use a columntransformer (in order to show feature names) - https://scikit-learn.org/stable/modules/generated/sklearn.compose.ColumnTransformer.html
+# from sklearn.compose import ColumnTransformer
+# num_cols = ["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
+# ct = ColumnTransformer(
+#     ("numerical", num_cols),
+#     verbose_feature_names_out=False,
+#   )
+# ct.set_output(transform="polars")
+
 # The other way to get features names is from pipeline only
 # requires to save df column names separately as an array
+# note: df.columns = feature/column names of physicochemical properties
+# feat_names = pl.Series("feat_names", df.columns[1:])
+# feat_names
 # LR[:-1].get_feature_names_out(feat_names)
 
-# the above pipeline works to show feature names - appears to need to set_output in 3 places - outside pipeline twice and inside pipeline once (for standard scaler part)
+## the above pipeline works to show feature names - appears to need to set_output in 3 places - outside pipeline twice and inside pipeline once (for standard scaler part) - *will check if any of them is not necessary?*
 ```
+
+I'm calling out the LR model used above in the pipeline as we want to get the feature names used for training and predicting along with their corresponding LR coefficients.
 
 ```{python}
 log_reg = LR[-1]
@@ -158,22 +154,23 @@ log_reg
 ```
 
 ```{python}
-# Save array as df
-lr_feat = pl.Series(log_reg.feature_names_in_).to_frame()
-lr_feat
-```
+# Save feature array as df
+lr_feat = pl.Series(log_reg.feature_names_in_).to_frame("Feature_names")
+# Explode df due to a list series - e.g. array([[1, 2, 3...]]) and not array([1, 2, 3...])
+lr_coef = pl.Series(log_reg.coef_).to_frame("Coef").explode("Coef")
+# Concatenate dfs horizontally
+df_feat = pl.concat([lr_feat, lr_coef], how="horizontal")
 
-**TODO**
+# Requires altair to be installed
+# Plotting feature names with coefficients 
+df_feat.plot.bar(
+  x="Coef", 
+  y="Feature_names", 
+  color="Feature_names",
+  tooltip="Coef"
+)
 
-```{python}
-# Need to un-pivot the dataframe
-lr_coef = pl.Series(log_reg.coef_).to_frame()
-lr_coef
-```
-
-```{python}
-# Can plot feature names with coefficients
-
+# How to enlarge chart?
 ```
 
 
