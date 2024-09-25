@@ -18,7 +18,7 @@ jupyter: python3
 
 ##### **Import libraries**
 
-This post will need the following libraries to build and train a logistic regression model before using the model to predict max phase outcome on a testing dataset in scikit_learn.
+This post will need the following libraries to build and train a logistic regression model before using it to predict max phase outcome on a testing dataset by using scikit_learn.
 
 ```{python}
 ## using magic pip to install sklearn & matplotlib (somehow venv keeps switching off in vscode...)
@@ -53,25 +53,27 @@ Logistic regression (LR) is one of the supervised methods in the statistical mac
 
 ###### **Define X and y variables**
 
-*not need to use to_numpy() as there's transform step included in LR estimator when being used in pipeline*
+The dataset will be splitted into X (features) and y (target) variables first.
 
 ```{python}
 # Define X variables
-X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]#.to_numpy()
+X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
 X
 ```
 
 ```{python}
 # Define y variable
-y = df["Max_Phase"]#.to_numpy()
+y = df["Max_Phase"]
 y
 ```
+
+Note: no need to use `to_numpy()` as there's a transform step (also `StandardScaler()` going to be used) included when using pipeline to create a LR model. This also applies if using `fit_transform()` or `transform()` when not using pipeline - see scikit_learn glossary reference on "[transform](https://scikit-learn.org/stable/glossary.html#term-transform)".
 
 <br>
 
 ###### **Prepare training and testing sets**
 
-The dataset is splitted into training and testing sets.
+Then the data will be further splitted into separate training and testing sets.
 
 ```{python}
 ## Random number generator
@@ -88,17 +90,18 @@ print('Testing set:', X_test.shape, y_test.shape)
 
 Some benefits of using pipeline ([scikit_learn reference](https://scikit-learn.org/stable/modules/compose.html#pipeline-chaining-estimators)):
 
-- chaining preprocessing step with different estimators in one go where we only have to call fit and predict once on our data 
+- chaining preprocessing step with different transformers and estimators in one go where we only have to call fit and predict once on our data 
 
 - avoiding data leakage from the testing set into the training set by making sure the same set of samples is used to train the transformers and predictors 
 
-- avoiding missing out on the transformation step (note: calling `fit()` on pipeline is equivalent to calling `fit()` on each estimator and `transform()` input data before the next step)
+- avoiding missing out on the transform step (note: calling `fit()` on pipeline is equivalent to calling `fit()` on each estimator and `transform()` input data before the next step, also `StandardScaler()` is going to be used in the pipeline as well)
 
 The example below uses `Pipeline()` to construct a pipeline that takes in a standard scaler to scale data and also a LR estimator, along with some parameters.
 
 ```{python}
 ## Pipeline:
 
+# Ensure prediction output can be read in polars df
 set_config(transform_output="polars")
 
 params_lr = {
@@ -108,24 +111,23 @@ params_lr = {
 }
 
 LR = Pipeline(steps=[
-  # Preprocess/scale the dataset
-  ("StandardScaler", StandardScaler().set_output(transform="polars")), 
-  # Create an instance of LR classifier 
+  # Preprocess/scale the dataset (transformer)
+  ("StandardScaler", StandardScaler()), # can add set_output(transform="polars") with standard scaler if preferred 
+  # Create an instance of LR classifier (estimator)
   ("LogR", LogisticRegression(**params_lr))
   ])
 
-LR.set_output(transform="polars")
+# can add set_output(transform="polars") with pipeline if preferred
 LR.fit(X_train, y_train)
 LR.predict(X_test)
 LR.score(X_test, y_test)
 ```
 
-```{python}
-# Figuring out how to best use set_output in polars 
-# So far, best use case is to show the feature_names_in_ along with coef_ 
-# Initial issue is the feature names are only shown as x0, x1, x2... not useful
-# Likely because all the mol features are not in strings (either i64 or f64, so the feature names are not shown)
+**to re-write below code comments**
 
+During the pipeline building, I've figured out how to integrate set_output() in Polars, and noted that the best use case is to show the feature_names_in_ along with coef_. The first issue is that the feature names are being generated as "[x0, x1, x2...]", which is not useful. One of the possible reasons could be because all the molecular features are not in strings (either i64 or f64, so the feature names are not shown).
+
+```{python}
 ## Tried the following with pipeline to get polars df output - didn't work as well as expected
 ## Likely need to use a columntransformer (in order to show feature names) - https://scikit-learn.org/stable/modules/generated/sklearn.compose.ColumnTransformer.html
 # from sklearn.compose import ColumnTransformer
@@ -143,7 +145,10 @@ LR.score(X_test, y_test)
 # feat_names
 # LR[:-1].get_feature_names_out(feat_names)
 
-## the above pipeline works to show feature names - appears to need to set_output in 3 places - outside pipeline twice and inside pipeline once (for standard scaler part) - *will check if any of them is not necessary?*
+## the above pipeline works to show feature names & coefficients
+# - checked and only really needs the set_config(transform_output="polars") before the pipeline code
+
+# or if not using set_config(), then add set_output() at standard scaler part or with the pipeline (so 3 options there)
 ```
 
 I'm calling out the LR model used above in the pipeline as we want to get the feature names used for training and predicting along with their corresponding LR coefficients.
@@ -161,18 +166,22 @@ lr_coef = pl.Series(log_reg.coef_).to_frame("Coef").explode("Coef")
 # Concatenate dfs horizontally
 df_feat = pl.concat([lr_feat, lr_coef], how="horizontal")
 
-# Requires altair to be installed
-# Plotting feature names with coefficients 
+# Using altair to plot feature names vs. coefficients 
 df_feat.plot.bar(
   x="Coef", 
   y="Feature_names", 
-  color="Feature_names",
+  #color="Feature_names", #will create a legend if used
   tooltip="Coef"
+).configure_axis(
+  labelFontSize=15,
+  titleFontSize=15
+).configure_view(
+  continuousWidth=600,
+  discreteHeight=300
 )
-
-# How to enlarge chart?
 ```
 
+<br>
 
 *All needed below?*
 
