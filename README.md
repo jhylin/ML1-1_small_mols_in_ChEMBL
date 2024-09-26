@@ -3,8 +3,8 @@ A series of Quarto markdown files (.qmd) are stored in this repository for an up
 
 ---
 
-As on 23/9/24:
+As on 26/9/24:
 
-* Managed to use set_output(transformation="polars") and set_config(transformation="polars") in the pipeline for 3rd post - pending a plot between feature names and coefficients and also some checks needed on predicted probabilities
+* Only really need to use either set_output(transformation="polars") or set_config(transformation="polars") once to get polars df output, configured plot of features and coefficients for ease of html viewing plus still pending checks on predicted probabilities
 
 * ETA: hopefully within the last quarter of the year for the first lot (i.e. ML 1-1-1 to 1-1-4) at least!
