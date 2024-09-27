@@ -16,9 +16,15 @@ categories:
 jupyter: python3
 ---
 
+**Import LR pipeline/model**
+
+
 #### **Evaluation of the logistic regression model**
 
 ###### **Accuracy scores**
+
+note: 
+y_mp = predicted y (y_mp = LR.predict(X_test)) y_test = actual/true y
 
 ```{python}
 from sklearn.metrics import accuracy_score
