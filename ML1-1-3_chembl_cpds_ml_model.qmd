@@ -36,6 +36,8 @@ import polars as pl
 print(f"polars version used is: {pl.__version__}")
 import altair as alt
 print(f"altair version used is: {alt.__version__}")
+import pickle
+import numpy as np
 ```
 
 The same set of data saved in the previous post will be read here using polars dataframe library.
@@ -121,7 +123,7 @@ LR = Pipeline(steps=[
 # can add set_output() if preferred
 # e.g. LR.set_output(transform="polars")
 LR.fit(X_train, y_train)
-LR.predict(X_test)
+pred = LR.predict(X_test)
 LR.score(X_test, y_test)
 ```
 
@@ -207,4 +209,22 @@ Then we can convert the predicted probabilities into a polars dataframe, along w
 pl.DataFrame(y_mp_pre_proba).describe()
 ```
 
-**May need to pickle LR model/pipeline for next post**
+<br>
+
+**Pickle LR pipeline**
+
+This last part is really for saving the LR pipeline for the next post on evaluating the LR model. I've talked a bit more about the security aspect of pickling files in [this old post](https://jhylin.github.io/Data_in_life_blog/posts/19_ML2-3_Boosted_trees/1_adaboost_xgb.html#pickle-model) in case anyone's interested.
+
+```{python}
+# Pickle to save (serialise) the model in working directory (specify path if needed)
+pickle.dump(LR, open("LR.pkl", "wb")) # "wb" - write binary
+# Unpickle (de-serialise) the model
+LR2 = pickle.load(open("LR.pkl", "rb")) # "rb" - read binary
+# Use the unpickled model object to make prediction
+pred2 = LR2.predict(X_test)
+## Check unpickled model and original model are the same via Python's assertion method
+#assert np.sum(np.abs(pred2 - pred)) == 0
+## or alternatively use numpy's allclose()
+print(np.allclose(pred, pred2)) # note: pred = LR.predict(X_test) from original LR pipeline
+```
+
