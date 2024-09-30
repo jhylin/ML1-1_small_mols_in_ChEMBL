@@ -18,6 +18,8 @@ jupyter: python3
 
 **Import LR pipeline/model**
 
+* pickle load
+
 
 #### **Evaluation of the logistic regression model**
 
