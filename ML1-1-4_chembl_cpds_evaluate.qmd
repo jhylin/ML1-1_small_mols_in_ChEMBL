@@ -16,20 +16,77 @@ categories:
 jupyter: python3
 ---
 
-**Import LR pipeline/model**
+##### **Import libraries**
 
-* pickle load
+```{python}
+import sklearn
+print(f"scikit-learn version used is: {sklearn.__version__}")
+# from sklearn import preprocessing, set_config
+from sklearn.model_selection import train_test_split
+# from sklearn.linear_model import LogisticRegression
+# from sklearn.pipeline import Pipeline
+# from sklearn.preprocessing import StandardScaler
+import polars as pl
+print(f"polars version used is: {pl.__version__}")
+# import altair as alt
+# print(f"altair version used is: {alt.__version__}")
+import pickle
+# import numpy as np
 
+# Accuracy scores
+from sklearn.metrics import accuracy_score
+# Import confusion matrix from scikit-learn
+from sklearn.metrics import confusion_matrix
+# Import itertools - functions to create iterators for efficient looping
+import itertools
+# Classification report
+from sklearn.metrics import classification_report
+```
 
-#### **Evaluation of the logistic regression model**
+##### **Import logistic regression pipeline/model**
+
+Load the pickled file.
+
+```{python}
+LR = pickle.load(open("LR.pkl", "rb"))
+LR
+```
+
+<br>
+
+##### **Evaluation of the logistic regression model**
+
+Outline:
+* Accuracy scores
+* Confusion matrix
+* Classification report (precision, recall, f1-score, support)
+* Log loss
+* ?add more
 
 ###### **Accuracy scores**
 
+```{python}
+## Read in data & split into training & testing sets
+
+# df = pl.read_csv("df_ml.csv")
+
+# X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
+# y = df["Max_Phase"]
+
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 50)
+
+## getting a warning message after accuracy score generated - UserWarning: X does not have valid feature names, but LogisticRegression was fitted with feature names (?due to LR being previously fitted on the data already...)
+
+## May need to save X_test & y_test as stand-alone datasets
+
+y_mp = LR.predict(X_test)
+```
+
 note: 
-y_mp = predicted y (y_mp = LR.predict(X_test)) y_test = actual/true y
+* y_mp = predicted y (y_mp = LR.predict(X_test))  
+* y_test = actual/true y
 
 ```{python}
-from sklearn.metrics import accuracy_score
 accuracy_score(y_mp, y_test)
 ```
 
@@ -48,11 +105,6 @@ LR.score(X_test, y_test)
 Next, I've built a confusion matrix based on the model in order to visualise the counts of correct and incorrect predictions. The function code used below was adapted from the IBM data science course I've taken around the end of last year. I've added comments to try and explain what each section of the code meant.
 
 ```{python}
-# Import confusion matrix from scikit-learn
-from sklearn.metrics import confusion_matrix
-# Import itertools - functions to create iterators for efficient looping
-import itertools
-
 # Function to print and plot confusion matrix
 def plot_confusion_matrix(# Sets a cm object (cm = confusion matrix)
                           cm, 
@@ -127,7 +179,6 @@ By having these four categories known would then lead us to the next section abo
 ###### **Classification report**
 
 ```{python}
-from sklearn.metrics import classification_report
 print(classification_report(y_test, y_mp))
 ```
 
