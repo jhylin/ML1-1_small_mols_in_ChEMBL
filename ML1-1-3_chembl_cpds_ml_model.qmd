@@ -1,6 +1,6 @@
 ---
 title: Small molecules in ChEMBL database
-subtitle: Series 1.1.3 - Logistic regression model building in *Scikit-learn*
+subtitle: Series 1.1.3 - Logistic regression model building in *scikit-learn*
 author: Jennifer HY Lin
 date: '2023-1-4'
 date-modified: last-modified
@@ -18,10 +18,10 @@ jupyter: python3
 
 ##### **Import libraries**
 
-This post will need the following libraries to build and train a logistic regression model before using it to predict max phase outcome on a testing dataset by using scikit_learn.
+This is the third post that follows on from the previous two about parquet file and data preprocessing, and it will need the following libraries to build and train a logistic regression (LR) model before using it to predict max phase outcome on a testing dataset by using scikit_learn.
 
 ```{python}
-## using magic pip to install sklearn & altair(somehow venv keeps switching off in vscode...)
+## using magic pip to install sklearn & altair (somehow venv keeps switching off in vscode...)
 # %pip install -U scikit-learn
 # %pip install altair
 
@@ -30,7 +30,7 @@ print(f"scikit-learn version used is: {sklearn.__version__}")
 from sklearn import preprocessing, set_config
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline, Pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import polars as pl
 print(f"polars version used is: {pl.__version__}")
@@ -51,7 +51,7 @@ df
 
 ##### **Logistic regression with *scikit-learn***
 
-[Logistic regression (LR)](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#logisticregression) is one of the supervised methods in the statistical machine learning (ML) area. As the term "supervised" suggests, this type of ML is purely data-driven to allow computers to learn patterns from the input data with known outcomes in order to predict the same target outcomes for a different set of data that is previously unseen by the computer.
+[LR](https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegression.html#logisticregression) is one of the supervised methods in the statistical machine learning (ML) area. As the term "supervised" suggests, this type of ML is purely data-driven to allow computers to learn patterns from the input data with known outcomes in order to predict the same target outcomes for a different set of data that is previously unseen by the computer.
 
 ###### **Define X and y variables**
 

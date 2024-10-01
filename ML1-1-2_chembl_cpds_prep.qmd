@@ -151,7 +151,7 @@ One of the other parameters I'm interested in is "QED Weighted" [@Bickerton2012]
 
 ##### **Prepare data prior to running ML model**
 
-The goal of this ML model is to answer this question - which physicochemical features will be useful to predict whether a compound will enter max phase 4? 
+The goal of this ML model is to answer this question - which physicochemical features may be useful to predict whether a compound may enter into max phase 4? 
 
 A rough plan at this stage is:
 
@@ -175,11 +175,11 @@ Downsides of this plan are (there are many...):
 
 - there are only a small number of max phase 4 compounds for model training (especially comparing with the "much larger" amount of max phase 0 compounds present)
 
-- LR may not be the best choice of ML model to start off with (but I just want to find out how it works at the time and hence I'm doing it here)
+- LR may not be the best choice of ML model to start off with (but I just want to find out how it works at the time and because I'm updating the post now so I'm trying to keep it the same...)
 
-- other exploratory data analysis should be done really... e.g. how chemically diverse the dataset is?
+- other exploratory data analysis should be done really... e.g. how chemically diverse is the dataset?
 
-- this is only an exercise or demonstration-like piece so will not be taking into account of many other important aspects of drug discovery e.g. what disorders or illnesses are we targeting? (is it an experimentally validated and suitable target?) and what have been done so far in the literatures? etc.
+- this is only an exercise so will not be taking into account many other important aspects of drug discovery e.g. what disorders or illnesses are we targeting? (is it an experimentally validated and actually a suitable target?) and what have been done so far in the literatures? etc.
 
 Firstly, I'm filtering out all the max phase 0 compounds and also all the max phase 4 compounds then save them in separate dataframes.
 
@@ -269,7 +269,7 @@ Note: max phase 4 (approved) compounds are re-labelled as Max_Phase = 1.
 df_concat.group_by("Max_Phase").len()
 ```
 
-So here we have the final version of the dataset, renamed to df_ml to avoid confusion from the previous dataframes, before entering the ML phase.
+So here we have the final version of the dataset, renamed to df_ml to avoid confusion from the previous dataframes, before entering into the ML phase.
 
 ```{python}
 df_ml = df_concat.select([
@@ -292,7 +292,7 @@ I'm just checking for any nulls in the final dataset (should be none as I've fil
 df_ml.null_count()
 ```
 
-Also, I'm checking the data types in df_ml dataset to make sure they're all integers or floats for Scikit-learn algorithms to work.
+Also, I'm checking the data types in df_ml dataset to make sure they're all integers or floats for scikit-learn algorithms to work.
 
 ```{python}
 # also shown in the dataframe below the column names
