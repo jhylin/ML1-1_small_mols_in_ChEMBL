@@ -26,15 +26,9 @@ import polars as pl
 print(f"polars version used is: {pl.__version__}")
 import pickle
 # import numpy as np
-
-# Accuracy scores
-from sklearn.metrics import accuracy_score
-# Import confusion matrix 
-from sklearn.metrics import confusion_matrix
-# Import itertools - functions to create iterators for efficient looping
-import itertools
-# Classification report
-from sklearn.metrics import classification_report
+import matplotlib.pyplot as plt
+# For accuracy scores, confusion matrix, ROC curve, classification report & log loss
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, classification_report, RocCurveDisplay, roc_curve, log_loss
 ```
 
 <br>
@@ -55,9 +49,9 @@ LR
 Outline:
 * Accuracy scores
 * Confusion matrix
+* ROC curve (to be added)
 * Classification report (precision, recall, f1-score, support)
 * Log loss
-* ?add more
 
 ###### **Accuracy scores**
 
@@ -77,91 +71,111 @@ accuracy_score(y_mp, y_test)
 ## getting a warning message after accuracy score generated earlier - "UserWarning: X does not have valid feature names, but LogisticRegression was fitted with feature names" - resolved, missed the fitting step first (my bad) before predict()
 ```
 
-**the following needs to be updated**
+The accuracy score is 0.69 (after rounding up) which means that there are around 70% of the cases or compounds classified correctly by using the LR classifier. This score is also the same as the one shown from the previous post using `score()` instead of `accuracy_score()`.
 
-The accuracy score was 0.7 (after rounding up) based on the original data preprocessing method, which meant that there were around 70% of the cases (or compounds) classified correctly by using this LR classifier. Accuracy literally provided a measure of how close the predicted samples were to the true values. One caveat to note was that for imbalanced dataset, accuracy score might not be very informative, and other evaluation metrics would need to be considered instead.
-
-The accuracy score shown below was from the pipeline method used previously, which showed a very similar accuracy score of 0.69656992 (close to 0.7), confirming the method was in line with the original preprocessing method.
-
-```{python}
-LR.score(X_test, y_test)
-```
+Accuracy score gives an idea about how close the predicted samples are to the true values. One caveat to note is that for imbalanced dataset, accuracy score might not be very informative and other evaluation metrics will be needed as well.
 
 <br>
 
 ###### **Confusion matrix**
 
-Next, I've built a confusion matrix based on the model in order to visualise the counts of correct and incorrect predictions. The function code used below was adapted from the IBM data science course I've taken around the end of last year. I've added comments to try and explain what each section of the code meant.
+A confusion matrix is built below based on the model in order to visualise the counts of correct and incorrect predictions. Previous code used to plot confusion matrix is shown below:
 
 ```{python}
+#| code-fold: true
+
 # Function to print and plot confusion matrix
-def plot_confusion_matrix(# Sets a cm object (cm = confusion matrix)
-                          cm, 
-                          # Sets classes of '1s' (Successes) & '0s' (Non-successes) for the cm
-                          classes,
-                          # If setting normalize = true, reports in ratios instead of counts
-                          normalize,
-                          title = 'Confusion matrix',
-                          # Choose colour of the cm (using colourmap recognised by matplotlib)
-                          cmap = plt.cm.Reds):
+# The function code below was adapted from the IBM data science course I've taken previously
+
+# Import itertools - to create iterators for efficient looping
+# import itertools
+
+# def plot_confusion_matrix(# Sets a cm object (cm = confusion matrix)
+#                           cm, 
+#                           # Sets classes of '1s' (Successes) & '0s' (Non-successes) for the cm
+#                           classes,
+#                           # If setting normalize = true, reports in ratios instead of counts
+#                           normalize,
+#                           title = 'Confusion matrix',
+#                           # Choose colour of the cm (using colourmap recognised by matplotlib)
+#                           cmap = plt.cm.Reds):
     
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis = 1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
+#     if normalize:
+#         cm = cm.astype('float') / cm.sum(axis = 1)[:, np.newaxis]
+#         print("Normalized confusion matrix")
+#     else:
+#         print('Confusion matrix, without normalization')
 
-    print(cm)
+#     print(cm)
 
-    # Plot the confusion matrix 
-    plt.imshow(cm, interpolation = 'nearest', cmap = cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation = 45)
-    plt.yticks(tick_marks, classes)
+#     # Plot the confusion matrix 
+#     plt.imshow(cm, interpolation = 'nearest', cmap = cmap)
+#     plt.title(title)
+#     plt.colorbar()
+#     tick_marks = np.arange(len(classes))
+#     plt.xticks(tick_marks, classes, rotation = 45)
+#     plt.yticks(tick_marks, classes)
 
-    # Floats to be round up to two decimal places if using normalize = True
-    # or else use integers
-    fmt = '.2f' if normalize else 'd'
-    # Sets threshold of 0.5
-    thresh = cm.max() / 2.
-    # Iterate through the results and differentiate between two text colours 
-    # by using the threshold as a cut-off
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt),
-                 horizontalalignment = "center",
-                 color = "white" if cm[i, j] > thresh else "black")
+#     # Floats to be round up to two decimal places if using normalize = True
+#     # or else use integers
+#     fmt = '.2f' if normalize else 'd'
+#     # Sets threshold of 0.5
+#     thresh = cm.max() / 2.
+#     # Iterate through the results and differentiate between two text colours 
+#     # by using the threshold as a cut-off
+#     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+#         plt.text(j, i, format(cm[i, j], fmt),
+#                  horizontalalignment = "center",
+#                  color = "white" if cm[i, j] > thresh else "black")
 
-    plt.tight_layout()
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
+#     plt.tight_layout()
+#     plt.ylabel('True label')
+#     plt.xlabel('Predicted label')
+# ```
+
+# ```{python}
+# # Compute confusion matrix
+# matrix = confusion_matrix(y_test, y_mp, labels = [0,1])
+# np.set_printoptions(precision = 2)
+
+# # Plot confusion matrix without normalisation
+# plt.figure()
+# plot_confusion_matrix(matrix, 
+#                       # Define classes of outcomes
+#                       classes = ['Max_Phase = 0','Max_Phase = 1'], 
+#                       # Set normalize = True if wanting ratios instead
+#                       normalize = False, 
+#                       title = "Confusion matrix without normalisation"
+#                      )
 ```
+
+*Old post that's got roc curve & confusion matrix - https://jhylin.github.io/Data_in_life_blog/posts/17_ML2-2_Random_forest/2_random_forest_classifier.html*
+
+There is actually an alternative and probably a better way (that uses less code) to plot confusion matrix using scikit_learn's code as shown below:
 
 ```{python}
-# Compute confusion matrix
-matrix = confusion_matrix(y_test, y_mp, labels = [0,1])
-np.set_printoptions(precision = 2)
-
-# Plot confusion matrix without normalisation
-plt.figure()
-plot_confusion_matrix(matrix, 
-                      # Define classes of outcomes
-                      classes = ['Max_Phase = 0','Max_Phase = 1'], 
-                      # Set normalize = True if wanting ratios instead
-                      normalize = False, 
-                      title = "Confusion matrix without normalisation"
-                     )
+ConfusionMatrixDisplay.from_estimator(LR, X_test, y_test)
+plt.show()
 ```
 
-A common rule of thumb for confusion matrix was that all predicted outcomes were columns and all the true outcomes were rows. However, there might be exceptions where this was the other way round. Four different categories could be seen in the confusion matrix which were:
+A common rule of thumb for confusion matrix is that all predicted outcomes are columns and all the true outcomes are rows. However, there might be exceptions where this would be the other way round. 
 
--   True positive - Predicted Max_Phase = 1 & True Max_Phase = 1 (126 out of 189 samples)
--   True negative - Predicted Max_Phase = 0 & True Max_Phase = 0 (139 out of 190 samples)
--   False positive - Predicted Max_Phase = 1 & True Max_Phase = 0 (63 out of 189 samples)
--   False negative - Predicted Max_Phase = 0 & True Max_Phase = 1 (51 out of 190 samples)
+Four different categories can be seen in the confusion matrix:
 
-By having these four categories known would then lead us to the next section about classification report, which showed all the precision, recall, f1-score and support metrics to evaluate the performance of this classifier.
+-   True positive - Predicted Max_Phase = 1 & True Max_Phase = 1 (391) - *what we're interested in*
+-   True negative - Predicted Max_Phase = 0 & True Max_Phase = 0 (391)
+-   False positive - Predicted Max_Phase = 1 & True Max_Phase = 0 (167)
+-   False negative - Predicted Max_Phase = 0 & True Max_Phase = 1 (185)
+
+<br>
+
+###### **ROC curve**
+
+**the following needs to be updated**
+
+old post ref: https://jhylin.github.io/Data_in_life_blog/posts/17_ML2-2_Random_forest/2_random_forest_classifier.html#plotting-roc-curves
+
+to be added.
 
 <br>
 
@@ -201,8 +215,8 @@ Log loss could be used as another gauge to show how good the classifier was at m
 
 ```{python}
 # Log loss
-from sklearn.metrics import log_loss
-log_loss(y_test, y_mp_proba)
+
+# log_loss(y_test, y_mp_proba)
 ```
 
 #### **Discussions and conclusion**

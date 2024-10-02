@@ -106,6 +106,9 @@ The example below uses `Pipeline()` to construct a pipeline that takes in a stan
 # Ensure prediction output can be read in polars df
 set_config(transform_output="polars")
 
+# multi_class defaults to 'auto' which selects 'ovr' if the data is binary, or if solver='liblinear'
+# multi_class is deprecated in version 1.5 and will be removed in 1.7 
+# this post uses sklearn version 1.5.2
 params_lr = {
   # solver for small dataset
   "solver": "liblinear",
