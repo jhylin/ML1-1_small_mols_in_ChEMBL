@@ -3,8 +3,8 @@ A series of Quarto markdown files (.qmd) are stored in this repository for an up
 
 ---
 
-As on 26/9/24:
+As on 3/10/24:
 
-* Only really need to use either set_output(transformation="polars") or set_config(transformation="polars") once to get polars df output, configured plot of features and coefficients for ease of html viewing plus still pending checks on predicted probabilities
+* Working on the 4th post to evaluate logistic regression model - adding ROC curve and update code to plot confusion matrix
 
 * ETA: hopefully within the last quarter of the year for the first lot (i.e. ML 1-1-1 to 1-1-4) at least!
