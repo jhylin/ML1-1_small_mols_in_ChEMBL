@@ -211,7 +211,7 @@ pl.DataFrame(y_mp_pre_proba).describe()
 
 <br>
 
-**Pickle LR pipeline**
+###### **Pickle LR pipeline**
 
 This last part is really for saving the LR pipeline for the next post on evaluating the LR model. I've talked a bit more about the security aspect of pickling files in [this old post](https://jhylin.github.io/Data_in_life_blog/posts/19_ML2-3_Boosted_trees/1_adaboost_xgb.html#pickle-model) in case anyone's interested.
 
@@ -227,4 +227,3 @@ pred2 = LR2.predict(X_test)
 ## or alternatively use numpy's allclose()
 print(np.allclose(pred, pred2)) # note: pred = LR.predict(X_test) from original LR pipeline
 ```
-

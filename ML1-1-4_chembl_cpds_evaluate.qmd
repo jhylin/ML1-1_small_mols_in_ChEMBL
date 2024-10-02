@@ -21,21 +21,15 @@ jupyter: python3
 ```{python}
 import sklearn
 print(f"scikit-learn version used is: {sklearn.__version__}")
-# from sklearn import preprocessing, set_config
 from sklearn.model_selection import train_test_split
-# from sklearn.linear_model import LogisticRegression
-# from sklearn.pipeline import Pipeline
-# from sklearn.preprocessing import StandardScaler
 import polars as pl
 print(f"polars version used is: {pl.__version__}")
-# import altair as alt
-# print(f"altair version used is: {alt.__version__}")
 import pickle
 # import numpy as np
 
 # Accuracy scores
 from sklearn.metrics import accuracy_score
-# Import confusion matrix from scikit-learn
+# Import confusion matrix 
 from sklearn.metrics import confusion_matrix
 # Import itertools - functions to create iterators for efficient looping
 import itertools
@@ -43,9 +37,11 @@ import itertools
 from sklearn.metrics import classification_report
 ```
 
+<br>
+
 ##### **Import logistic regression pipeline/model**
 
-Load the pickled file.
+Loading the pickled file here first.
 
 ```{python}
 LR = pickle.load(open("LR.pkl", "rb"))
@@ -54,7 +50,7 @@ LR
 
 <br>
 
-##### **Evaluation of the logistic regression model**
+##### **Evaluations of the logistic regression model**
 
 Outline:
 * Accuracy scores
@@ -67,28 +63,21 @@ Outline:
 
 ```{python}
 ## Read in data & split into training & testing sets
-
-# df = pl.read_csv("df_ml.csv")
-
-# X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
-# y = df["Max_Phase"]
-
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 50)
-
-## getting a warning message after accuracy score generated - UserWarning: X does not have valid feature names, but LogisticRegression was fitted with feature names (?due to LR being previously fitted on the data already...)
-
-## May need to save X_test & y_test as stand-alone datasets
-
+df = pl.read_csv("df_ml.csv")
+X = df["#RO5 Violations", "Polar Surface Area", "HBA", "HBD", "QED Weighted", "CX LogP", "CX LogD", "Heavy Atoms"]
+y = df["Max_Phase"]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 50)
+LR.fit(X_train, y_train)
 y_mp = LR.predict(X_test)
-```
 
-note: 
-* y_mp = predicted y (y_mp = LR.predict(X_test))  
-* y_test = actual/true y
-
-```{python}
+# y_mp = predicted y 
+# y_test = actual/true y
 accuracy_score(y_mp, y_test)
+
+## getting a warning message after accuracy score generated earlier - "UserWarning: X does not have valid feature names, but LogisticRegression was fitted with feature names" - resolved, missed the fitting step first (my bad) before predict()
 ```
+
+**the following needs to be updated**
 
 The accuracy score was 0.7 (after rounding up) based on the original data preprocessing method, which meant that there were around 70% of the cases (or compounds) classified correctly by using this LR classifier. Accuracy literally provided a measure of how close the predicted samples were to the true values. One caveat to note was that for imbalanced dataset, accuracy score might not be very informative, and other evaluation metrics would need to be considered instead.
 
