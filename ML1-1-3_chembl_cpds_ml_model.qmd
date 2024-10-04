@@ -1,6 +1,6 @@
 ---
 title: Small molecules in ChEMBL database
-subtitle: Series 1.1.3 - Logistic regression model building in *scikit-learn*
+subtitle: Series 1.1.3 - Building logistic regression model using *scikit-learn*
 author: Jennifer HY Lin
 date: '2023-1-4'
 date-modified: last-modified
@@ -18,7 +18,7 @@ jupyter: python3
 
 ##### **Import libraries**
 
-This is the third post that follows on from the previous two about parquet file and data preprocessing, and it will need the following libraries to build and train a logistic regression (LR) model before using it to predict max phase outcome on a testing dataset by using scikit_learn.
+This is the third post that follows on from the previous two about parquet file and data preprocessing, and it will need the following libraries to build and train a logistic regression (LR) model before using it to predict max phase outcome on a testing dataset by using scikit-learn.
 
 ```{python}
 ## using magic pip to install sklearn & altair (somehow venv keeps switching off in vscode...)
@@ -69,7 +69,7 @@ y = df["Max_Phase"]
 y
 ```
 
-Note: no need to use `to_numpy()` as there's a transform step included when using pipeline to create a LR model (also `StandardScaler()` going to be used). This also applies if using `fit_transform()` or `transform()` when not using pipeline - see scikit_learn reference on "[transform](https://scikit-learn.org/stable/glossary.html#term-transform)".
+Note: no need to use `to_numpy()` as there's a transform step included when using pipeline to create a LR model (also `StandardScaler()` going to be used). This also applies if using `fit_transform()` or `transform()` when not using pipeline - see scikit-learn reference on "[transform](https://scikit-learn.org/stable/glossary.html#term-transform)".
 
 <br>
 
@@ -90,7 +90,7 @@ print('Testing set:', X_test.shape, y_test.shape)
 
 ###### **Pipeline method**
 
-Some benefits of using pipeline ([scikit_learn reference](https://scikit-learn.org/stable/modules/compose.html#pipeline-chaining-estimators)):
+Some benefits of using pipeline ([scikit-learn reference](https://scikit-learn.org/stable/modules/compose.html#pipeline-chaining-estimators)):
 
 - chaining preprocessing step with different transformers and estimators in one go where we only have to call fit and predict once on our data 
 
@@ -123,16 +123,15 @@ LR = Pipeline(steps=[
   ("LogR", LogisticRegression(**params_lr))
   ])
 
-# can add set_output() if preferred
-# e.g. LR.set_output(transform="polars")
+# can add set_output() if preferred e.g. LR.set_output(transform="polars")
 LR.fit(X_train, y_train)
 pred = LR.predict(X_test)
 LR.score(X_test, y_test)
 ```
 
-During the pipeline building, I've figured out how to integrate set_output() in Polars, and noted that the best use case is to show the `feature_names_in_` along with `coef_` ([scikit_learn reference](https://scikit-learn.org/stable/glossary.html#term-coef_)). The first issue is that the feature names are being generated as "[x0, x1, x2...]", which is not useful. One of the possible reasons could be because all the molecular features are not in strings (as they're either i64 or f64), so the feature names are not shown - I'm actually unsure about this but this is just my guess. 
+During the pipeline building, I've figured out how to integrate set_output() in Polars, and noted that the best use case is to show the `feature_names_in_` along with `coef_` ([scikit-learn reference](https://scikit-learn.org/stable/glossary.html#term-coef_)). The first issue is that the feature names are being generated as "[x0, x1, x2...]", which is not useful. One of the possible reasons could be because all the molecular features are not in strings (as they're either i64 or f64), so the feature names are not shown - I'm actually unsure about this but this is just my guess. 
 
-One of the other ways I've tried is to use `ColumnTransformer()` within the pipeline ([scikit_learn reference]((https://scikit-learn.org/stable/modules/generated/sklearn.compose.ColumnTransformer.html)) - code example folded below) but unfortunately it hasn't worked as well as expected.
+One of the other ways I've tried is to use `ColumnTransformer()` within the pipeline ([scikit-learn reference]((https://scikit-learn.org/stable/modules/generated/sklearn.compose.ColumnTransformer.html)) - code example folded below) but unfortunately it hasn't worked as well as expected.
 
 ```{python}
 #| code-fold: true
@@ -185,7 +184,7 @@ df_feat.plot.bar(
 
 #RO5 Violations, CXLogP, HBA and HBD all have positive weights or coefficients, when the rest of the molecular features (CXLogD, heavy atoms, polar surface area and QED Weighted) all have the negative coefficients. This is likely the equivalent to using the `feature_importances_` in random forest I'm guessing. I've sorted the order of coefficients from highest to lowest in the chart.
 
-Another way to get features names is from the pipeline as well but requires a step saving dataframe column names separately as an NumPy array first ([scikit_learn reference](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.get_feature_names_out)). The previous way seems to save a bit more time on coding as there's no need to do this, and also you can retrieve the coefficients of the features at the same time. 
+Another way to get features names is from the pipeline as well but requires a step saving dataframe column names separately as an NumPy array first ([scikit-learn reference](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.get_feature_names_out)). The previous way seems to save a bit more time on coding as there's no need to do this, and also you can retrieve the coefficients of the features at the same time. 
 
 ```{python}
 #| code-fold: true

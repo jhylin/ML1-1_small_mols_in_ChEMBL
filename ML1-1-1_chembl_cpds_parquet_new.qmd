@@ -23,7 +23,7 @@ Three reasons for this:
 
     Note: GitHub blocks files larger than 100 MiB, which is in mebibytes and equivalent to 1,048,576 bytes or 1.04858 MB ([reference](https://www.ibm.com/docs/en/storage-insights?topic=overview-units-measurement-storage-data)) - my bad before as I've read "MiB" as "MB" from this [GitHub doc](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)!
 
-2. Polars seems to be a bit more integrated with scikit_learn now so I'm wondering if Polars dataframe library can be used with scikit_learn solely (i.e. not using Pandas at all)
+2. Polars seems to be a bit more integrated with scikit-learn now so I'm wondering if Polars dataframe library can be used with scikit-learn solely (i.e. not using Pandas at all)
 
 3. This post is one of my earlier less mature posts (very embarrassing when I'm looking at it now...) so I just want to improve it a little at least
 
@@ -31,7 +31,7 @@ Three reasons for this:
 
 ##### **Previous post updates**
 
-*Update on 19th April 2024 - Polars is currently more integrated with Scikit-learn from version 1.4 (since January 2024), see this link re. [Polars output in set_output](https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_4_0.html#polars-output-in-set-output) for Polars dataframe outputs in Scikit-learn, and also a few other Polars enhancements from release [version 1.4 changelog](https://scikit-learn.org/dev/whats_new/v1.4.html#).*
+*Update on 19th April 2024 - Polars is currently more integrated with scikit-learn from version 1.4 (since January 2024), see this link re. [Polars output in set_output](https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_4_0.html#polars-output-in-set-output) for Polars dataframe outputs in scikit-learn, and also a few other Polars enhancements from release [version 1.4 changelog](https://scikit-learn.org/dev/whats_new/v1.4.html#).*
 
 *Update on 16th August 2023 - some code updates only, please always refer to [Polars API reference](https://docs.pola.rs/py-polars/html/reference/index.html) for most up-to-date code.*
 
@@ -39,7 +39,7 @@ Three reasons for this:
 
 ##### **Background**
 
-This is the first part of the series of posts on building a logistic regression model by using scikit_learn with [Polars dataframe library](https://docs.pola.rs/) (note: the older version of this post also uses Pandas). Polars is a fast (or more commonly known as "blazingly fast") dataframe library that is written completely in Rust with a very light Python binding that is available for use in Python or Rust programming language. Here I'll be using Python throughout all posts in the series. 
+This is the first part of the series of posts on building a logistic regression model by using scikit-learn with [Polars dataframe library](https://docs.pola.rs/) (note: the older version of this post also uses Pandas). Polars is a fast (or more commonly known as "blazingly fast") dataframe library that is written completely in Rust with a very light Python binding that is available for use in Python or Rust programming language. Here I'll be using Python throughout all posts in the series. 
 
 This post will only focus on getting the small molecules data ready from ChEMBL database via a straight website download (not recommended if you're researching or doing virtual experiments that require a good level of data reproducibility, e.g. you'll need the version of data etc., this is however only a demonstration so I'll leave it as it is), and then convert the comma separated value (.csv) file into a parquet file (for better file compressions) in order to upload the data into GitHub. 
 
@@ -200,4 +200,4 @@ df_pa = pl.read_parquet("chembl_sm_mols.parquet")
 df_pa
 ```
 
-So it looks like it does. The next series of posts will be about trying to use Polars dataframe library all the way with scikit_learn (which I'm unsure if it is possible at the moment but I'll give it a try).
+So it looks like it does. The next series of posts will be about trying to use Polars dataframe library all the way with scikit-learn.

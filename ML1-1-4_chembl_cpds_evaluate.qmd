@@ -1,6 +1,6 @@
 ---
 title: Small molecules in ChEMBL database
-subtitle: Series 1.1.4 - Evaluating logistic regression model in *Scikit-learn*
+subtitle: Series 1.1.4 - Evaluating logistic regression model in *scikit-learn*
 author: Jennifer HY Lin
 date: '2023-1-4'
 date-modified: last-modified
@@ -14,9 +14,12 @@ categories:
   - ChEMBL database
   - Cheminformatics
 jupyter: python3
+bibliography: references.bib
 ---
 
 ##### **Import libraries**
+
+In this fourth post and likely the last post of the logistic regression (LR) series, we're still going to begin with importing all the libraries needed for the following work on model evaluations.
 
 ```{python}
 import sklearn
@@ -27,7 +30,7 @@ print(f"polars version used is: {pl.__version__}")
 import pickle
 import matplotlib.pyplot as plt
 from sklearn import metrics
-# For accuracy scores, confusion matrix, ROC curve, classification report & log loss
+# For model evaluations
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, classification_report, RocCurveDisplay, roc_curve, log_loss
 ```
 
@@ -35,7 +38,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDis
 
 ##### **Import logistic regression pipeline/model**
 
-Loading the pickled file here first.
+Next, we need to load the pickled file so we can evaluate the same LR pipeline used last time.
 
 ```{python}
 LR = pickle.load(open("LR.pkl", "rb"))
@@ -46,9 +49,11 @@ LR
 
 ##### **Evaluations of the logistic regression model**
 
-This part will involve using accuracy scores, confusion matrix, ROC curve, classification report and log loss to evaluate the LR model.
+This part will involve using accuracy scores, confusion matrix, receiver operating characteristic (ROC) curve, classification report and log loss to evaluate the LR model. The main statistical principles and concepts being referred to here are mostly from this reference textbook [@bruce2020], and a lot of native built-in functions from scikit-learn [@pedregosa2011] are used to generate the results.
 
 ###### **Accuracy scores**
+
+The easiest one to understand will be accuracy score, which can be calculated using predicted y outcome and actual or true y outcome in scikit-learn as shown below.
 
 ```{python}
 ## Read in data & split into training & testing sets
@@ -58,12 +63,11 @@ y = df["Max_Phase"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 50)
 LR.fit(X_train, y_train)
 y_mp = LR.predict(X_test)
-
-# y_mp = predicted y 
-# y_test = actual/true y
 accuracy_score(y_mp, y_test)
 
-## getting a warning message after accuracy score generated earlier - "UserWarning: X does not have valid feature names, but LogisticRegression was fitted with feature names" - resolved, missed the fitting step first (my bad) before predict()
+## getting a warning message after accuracy score generated earlier 
+# "UserWarning: X does not have valid feature names, but LogisticRegression was fitted with feature names" 
+# - resolved, missed the fitting step first (my bad) before predict()
 ```
 
 The accuracy score is 0.69 (after rounding up) which means that there are around 70% of the cases or compounds classified correctly by using the LR classifier. This score is also the same as the one shown from the previous post using `score()` instead of `accuracy_score()`.
@@ -143,7 +147,7 @@ A confusion matrix is built below based on the model in order to visualise the c
 #                      )
 ```
 
-There is actually an alternative and probably a better way (that uses less code) to plot confusion matrix using scikit_learn's code as shown below:
+There is actually an alternative and probably a better way (that uses less code) to plot confusion matrix using scikit-learn's code as shown here:
 
 ```{python}
 ConfusionMatrixDisplay.from_estimator(LR, X_test, y_test)
@@ -209,7 +213,7 @@ $$
 
 ###### **Log loss**
 
-Log loss can be used as another metric to show how good the classifier is at making the predictions. The further apart the predicted probability is from the true value, the larger the log loss, which is also ranging from 0 to 1. Ideally, the smaller the log loss the better the model will be. Here, we have a log loss of 0.607 for this particular model.
+Log loss can be used as another metric to show how good the classifier is at making the predictions. The further apart the predicted probability is from the true value, the larger the log loss, which is also ranging from 0 to 1. Ideally, the smaller the log loss the better the model will be. Here, we have a log loss of 0.61 (after rounding up) for this particular model.
 
 ```{python}
 log_loss(y_test, y_mp_probs)
@@ -217,33 +221,25 @@ log_loss(y_test, y_mp_probs)
 
 <br>
 
-#### **Discussions and conclusion**
+#### **Thoughts**
 
-**the following needs to be updated**
+So here I've completed a very basic LR classifier model for ChEMBL small molecules dataset. This is certainly not the most optimal machine learning model as I've only wanted to show how a baseline LR model can be built. This post update has added a molecular features versus coefficients plot (in the previous post) which shows the different weightings of the features used to train the dataset, ideally I should include more to provide a better overview of how the physicochemical properties will influence the prediction outcomes, but potentially this plot sort of answers the main goal of the post - which molecular properties might influence max phase outcomes. This last post here is really to show all the different evaluation metrics for the LR model, and I've added a ROC curve this time.
 
-So here I've completed a very basic LR classifier model for ChEMBL compound dataset. By no means was this a perfect ML model as I haven't actually changed the default settings of *scikit-learn*'s LogisticRegression() classifier, with examples such as adjusting C, a regularization parameter which was set at '1.0' by default, and also solvers, which could take in different algorithms for use in optimisation problems and normally set as 'lbfgs' by default.
-
-So with this default LR model, the evaluation metrics demonstrated a LR classifer of moderate quality to predict the approval outcomes on ChEMBL small molecules, with a lot of rooms for improvements. Therefore, I could not yet confirm fully that the physicochemical parameters chosen would be the best ones to predict the approval outcomes for any small molecules. However, I might be okay to say that these molecular parameters were on the right track to help with making this prediction.
-
-To further improve this model, I could possibly trial changing the C value and use different solvers to see if better outcomes could be achieved, or even add more molecular parameters in the model to test. I could have also trialled adding more class labels, e.g. making it between max phase 1, 2 and 4, or a mix-and-match between each max phase category. Other things to consider would be to use other types of ML methods such as naive Bayes, K-nearest neighbours or decision trees and so on. To tackle the problem thoroughly, I would most likely need to do an ensemble of different ML models to find out which model would be the most optimal to answer our target question.
+To further improve this model, I could possibly try hyperparameter tuning although I've come across comments from others in the past that it might not improve LR model that much once it's done. Originally I do have two other posts following on from the first one (which is currently splitted into four smaller posts), and one of them is about hyperparameter tuning. My possible plan at the moment is to maybe update these other two posts further down the line and I may decide to condense or remove them if it's not really going to make much difference or impact, I'll see...
 
 <br>
 
-#### **Final words**
+#### **Acknowledgements**
 
-I've experienced the fun of ML after completing this project. The idea was to build on what I knew gradually and enjoy what ML could do when making critical decisions. From what I've learnt about ML so far (and definitely more to learn) was that the quality of data was vital for making meaningful interpretations of the results.
-
-However, jumping back to present time, I'll need to work on my second project first, which is about using Rust interactively via Jupyter notebook. At the moment, I'm not sure how long it will take or how the content will play out. I'll certainly do as much as I can since Rust is very new to me. If I get very stuck, I'd most likely continue on this ML series. Thanks for reading.
+Huge thanks to our online open-source communities, libraries, and also all the references used in this series of posts.
 
 <br>
 
-#### **References**
+#### **Online references**
 
-I've listed below most of the references used throughout this project. Again, huge thanks could not be forgotten for our online communities, and definitely also towards the references I've used here.
+I've listed below all the online references used throughout this project. All the other journal paper or text book references used should be cited in the post already and listed below. 
 
 -   [scikit-learn documentation](https://scikit-learn.org/stable/index.html)
--   [Scikit-learn: Machine Learning in Python](https://jmlr.csail.mit.edu/papers/v12/pedregosa11a.html), Pedregosa *et al.*, JMLR 12, pp. 2825-2830, 2011.
--   Bruce, P., Bruce, A. & Gedeck P. (2020). Practical statistics for data scientists. O'Reilly.
 -   [Stack Overflow](https://stackoverflow.com)
 -   Polars references:
     1.  [Polars - User Guide](https://pola-rs.github.io/polars-book/user-guide/introduction.html) - https://pola-rs.github.io/polars-book/user-guide/introduction.html
