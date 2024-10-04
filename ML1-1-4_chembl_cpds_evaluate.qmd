@@ -25,8 +25,8 @@ from sklearn.model_selection import train_test_split
 import polars as pl
 print(f"polars version used is: {pl.__version__}")
 import pickle
-# import numpy as np
 import matplotlib.pyplot as plt
+from sklearn import metrics
 # For accuracy scores, confusion matrix, ROC curve, classification report & log loss
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay, classification_report, RocCurveDisplay, roc_curve, log_loss
 ```
@@ -46,12 +46,7 @@ LR
 
 ##### **Evaluations of the logistic regression model**
 
-Outline:
-* Accuracy scores
-* Confusion matrix
-* ROC curve (to be added)
-* Classification report (precision, recall, f1-score, support)
-* Log loss
+This part will involve using accuracy scores, confusion matrix, ROC curve, classification report and log loss to evaluate the LR model.
 
 ###### **Accuracy scores**
 
@@ -84,11 +79,12 @@ A confusion matrix is built below based on the model in order to visualise the c
 ```{python}
 #| code-fold: true
 
-# Function to print and plot confusion matrix
-# The function code below was adapted from the IBM data science course I've taken previously
+## Function to print and plot confusion matrix
+## The function code below was adapted from the IBM data science course I've taken previously
 
-# Import itertools - to create iterators for efficient looping
+# # to create iterators for efficient looping
 # import itertools
+# import numpy as np
 
 # def plot_confusion_matrix(# Sets a cm object (cm = confusion matrix)
 #                           cm, 
@@ -100,40 +96,38 @@ A confusion matrix is built below based on the model in order to visualise the c
 #                           # Choose colour of the cm (using colourmap recognised by matplotlib)
 #                           cmap = plt.cm.Reds):
     
-#     if normalize:
-#         cm = cm.astype('float') / cm.sum(axis = 1)[:, np.newaxis]
-#         print("Normalized confusion matrix")
-#     else:
-#         print('Confusion matrix, without normalization')
+    # if normalize:
+    #     cm = cm.astype('float') / cm.sum(axis = 1)[:, np.newaxis]
+    #     print("Normalized confusion matrix")
+    # else:
+    #     print('Confusion matrix, without normalization')
 
-#     print(cm)
+    # print(cm)
 
-#     # Plot the confusion matrix 
-#     plt.imshow(cm, interpolation = 'nearest', cmap = cmap)
-#     plt.title(title)
-#     plt.colorbar()
-#     tick_marks = np.arange(len(classes))
-#     plt.xticks(tick_marks, classes, rotation = 45)
-#     plt.yticks(tick_marks, classes)
+    # # Plot the confusion matrix 
+    # plt.imshow(cm, interpolation = 'nearest', cmap = cmap)
+    # plt.title(title)
+    # plt.colorbar()
+    # tick_marks = np.arange(len(classes))
+    # plt.xticks(tick_marks, classes, rotation = 45)
+    # plt.yticks(tick_marks, classes)
 
-#     # Floats to be round up to two decimal places if using normalize = True
-#     # or else use integers
-#     fmt = '.2f' if normalize else 'd'
-#     # Sets threshold of 0.5
-#     thresh = cm.max() / 2.
-#     # Iterate through the results and differentiate between two text colours 
-#     # by using the threshold as a cut-off
-#     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-#         plt.text(j, i, format(cm[i, j], fmt),
-#                  horizontalalignment = "center",
-#                  color = "white" if cm[i, j] > thresh else "black")
+    # # Floats to be round up to two decimal places if using normalize = True
+    # # or else use integers
+    # fmt = '.2f' if normalize else 'd'
+    # # Sets threshold of 0.5
+    # thresh = cm.max() / 2.
+    # # Iterate through the results and differentiate between two text colours 
+    # # by using the threshold as a cut-off
+    # for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+    #     plt.text(j, i, format(cm[i, j], fmt),
+    #              horizontalalignment = "center",
+    #              color = "white" if cm[i, j] > thresh else "black")
 
-#     plt.tight_layout()
-#     plt.ylabel('True label')
-#     plt.xlabel('Predicted label')
-# ```
+    # plt.tight_layout()
+    # plt.ylabel('True label')
+    # plt.xlabel('Predicted label')
 
-# ```{python}
 # # Compute confusion matrix
 # matrix = confusion_matrix(y_test, y_mp, labels = [0,1])
 # np.set_printoptions(precision = 2)
@@ -149,8 +143,6 @@ A confusion matrix is built below based on the model in order to visualise the c
 #                      )
 ```
 
-*Old post that's got roc curve & confusion matrix - https://jhylin.github.io/Data_in_life_blog/posts/17_ML2-2_Random_forest/2_random_forest_classifier.html*
-
 There is actually an alternative and probably a better way (that uses less code) to plot confusion matrix using scikit_learn's code as shown below:
 
 ```{python}
@@ -162,20 +154,26 @@ A common rule of thumb for confusion matrix is that all predicted outcomes are c
 
 Four different categories can be seen in the confusion matrix:
 
--   True positive - Predicted Max_Phase = 1 & True Max_Phase = 1 (391) - *what we're interested in*
+-   True positive - Predicted Max_Phase = 1 & True Max_Phase = 1 (391) - *interested in this*
 -   True negative - Predicted Max_Phase = 0 & True Max_Phase = 0 (391)
 -   False positive - Predicted Max_Phase = 1 & True Max_Phase = 0 (167)
 -   False negative - Predicted Max_Phase = 0 & True Max_Phase = 1 (185)
 
 <br>
 
-###### **ROC curve**
+###### **Receiver operating characteristic (ROC) curve**
 
-**the following needs to be updated**
+My [old post](https://jhylin.github.io/Data_in_life_blog/posts/17_ML2-2_Random_forest/2_random_forest_classifier.html#brief-introduction) about random forest classifier has already explained what an area under the ROC curve is (I'm just going to quote myself...):
 
-old post ref: https://jhylin.github.io/Data_in_life_blog/posts/17_ML2-2_Random_forest/2_random_forest_classifier.html#plotting-roc-curves
+> Area under the ROC curve: [reference](https://scikit-learn.org/stable/modules/model_evaluation.html#receiver-operating-characteristic-roc) - the area under a curve plot between sensitivity or recall (percent of all 1s classified correctly by a classifier or true positive rate) and specificity (percent of all 0s classified correctly by a classifier, or equivalent to 1 - false positive rate or true negative rate) (Bruce, Bruce, and Gedeck 2020). It is useful for evaluating the performance of a classification model via comparing the true positive rate and false positive rate which are influenced by shifting the decision threshold. Area under the ROC is usually represented as a number ranging from 0 to 1 (1 being a perfect classifier, 0.5 or below meaning a poor, ineffective classifier)
 
-to be added.
+In this case, we can also apply ROC curve to the LR model and its predicted outcomes.
+
+```{python}
+# get the predicted probabilities of outcome = 1 (approved drugs)
+y_mp_probs = LR.predict_proba(X_test)[:, 1]
+RocCurveDisplay.from_predictions(y_test, y_mp_probs, plot_chance_level = True)
+```
 
 <br>
 
@@ -185,41 +183,43 @@ to be added.
 print(classification_report(y_test, y_mp))
 ```
 
-***Precision*** was a measure of the accuracy of a predicted outcome, where a class label had been predicted by the classifier. So in this case, we could see that for class label 1, the precision was 0.67, which corresponded to the true positive result of 126 out of 189 samples (= 0.666). It was defined by:
+***Precision*** is a measure of the accuracy of a predicted outcome, where a class label has been predicted by the classifier. In this case, we can see that for class label 1, the precision is 0.70, which corresponds to the true positive result of 391 out of 558 samples (= 0.70, for true predicted Max_Phase = 1 column). It is defined by:
 
 $$
 \text{Precision} = \frac{\Sigma\ True\ Positive}{(\Sigma\ True\ Positive + \Sigma\ False\ Positive)}
 $$
 
-***Recall***, also known as sensitivity (especially widely used in biostatistics and medical diagnostic fields), was a measure of the strength of the classifier to predict a positive outcome. In simple words, it measured the true positive rate. In this example, there was a total of 126 out of 177 samples (which = 0.712, for True Max_Phase = 1 row) that had a true positive outcome of having a max phase of 1. It was defined by:
+***Recall***, also known as sensitivity (especially widely used in biostatistics and medical diagnostic fields), is a measure of the strength of the classifier to predict a positive outcome. In simple words, it measures the true positive rate. In this example, there is a total of 391 out of 576 samples (which = 0.68, for true Max_Phase = 1 row). It is defined by:
 
 $$
 \text{Recall} = \frac{\Sigma\ True\ Positive}{(\Sigma\ True\ Positive + \Sigma\ False\ Negative)}
 $$
 
-The precision and recall metrics could also be calculated for class label = 0, which were shown for the row 0 in the classification report.
+The precision and recall metrics are also calculated and shown for row 0 in the classification report.
 
-***f1-score***, or also known as balanced F-score or F-measure, denoted the harmonic average of both precision and recall metrics. This metric would also give another indication about whether this model performed well on outcome predictions. It normally ranged from 0 (worst precision and recall) to 1 (perfect precision and recall). For this particular classifier, f1-score was at 0.69 (for class label = 1), which was definitely not at its worst, but also could be further improved. It was defined as:
+***f1-score***, or also known as balanced F-score or F-measure, denoted the harmonic average of both precision and recall metrics. This metric will also give another indication about whether this model performed well on outcome predictions. Its range is normally from 0 (worst precision and recall) to 1 (perfect precision and recall). For this particular classifier, f1-score was at 0.69 (for class label = 1). It is defined as:
 
 $$
 \text{F1-score} = \frac{2 \times (Precision \times Recall)}{(Precision + Recall)}
 $$
 
-***Support***, which some readers might have already worked out how the numbers were derived, was the total number of true samples in each class label (reading row-wise from the confusion matrix). The main purpose of showing this metric was to help clarifying whether the model or classifier had a reasonably balanced dataset for each class or otherwise.
+***Support*** is the total number of true samples in each class label (reading row-wise from the confusion matrix). The main purpose of showing this metric is to help clarifying whether the model has had a reasonably balanced dataset for each class (and also helped to check the precision and recall values if needed).
 
 <br>
 
 ###### **Log loss**
 
-Log loss could be used as another gauge to show how good the classifier was at making the outcome predictions. The further the predicted probability was from the true value, the larger the log loss, which was also ranged from 0 to 1. Ideally, the smaller the log loss the better the model would be. Here, we had a log loss of 0.607 for this particular model.
+Log loss can be used as another metric to show how good the classifier is at making the predictions. The further apart the predicted probability is from the true value, the larger the log loss, which is also ranging from 0 to 1. Ideally, the smaller the log loss the better the model will be. Here, we have a log loss of 0.607 for this particular model.
 
 ```{python}
-# Log loss
-
-# log_loss(y_test, y_mp_proba)
+log_loss(y_test, y_mp_probs)
 ```
 
+<br>
+
 #### **Discussions and conclusion**
+
+**the following needs to be updated**
 
 So here I've completed a very basic LR classifier model for ChEMBL compound dataset. By no means was this a perfect ML model as I haven't actually changed the default settings of *scikit-learn*'s LogisticRegression() classifier, with examples such as adjusting C, a regularization parameter which was set at '1.0' by default, and also solvers, which could take in different algorithms for use in optimisation problems and normally set as 'lbfgs' by default.
 
