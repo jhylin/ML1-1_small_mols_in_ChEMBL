@@ -1,6 +1,6 @@
 ---
 title: Small molecules in ChEMBL database
-subtitle: Series 1.1.1 - Parquet file in Polars dataframe library (an update)
+subtitle: Series 1.1.1 - Parquet file in Polars dataframe library
 author: Jennifer HY Lin
 date: '2023-1-4'
 date-modified: last-modified
@@ -15,7 +15,7 @@ categories:
 jupyter: python3
 ---
 
-##### **Why revamping this post?**
+##### **Why updating this post?**
 
 Three reasons for this: 
 
@@ -201,3 +201,5 @@ df_pa
 ```
 
 So it looks like it does. The next series of posts will be about trying to use Polars dataframe library all the way with scikit-learn.
+
+Note: the way I've compressed the original data file may not be the best as I'm losing some data along the way by restricting the number of data entries. There are definitely other better ways out there, please use this example with care.
