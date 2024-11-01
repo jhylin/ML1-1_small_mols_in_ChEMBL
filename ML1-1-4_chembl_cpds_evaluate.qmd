@@ -4,7 +4,7 @@ subtitle: Series 1.1.4 - Evaluating logistic regression model in *scikit-learn*
 author: Jennifer HY Lin
 date: '2023-1-4'
 date-modified: last-modified
-draft: true
+draft: false
 categories:
   - Machine learning projects
   - Scikit-learn
@@ -237,11 +237,11 @@ Huge thanks to our online open-source communities, libraries, and also all the r
 
 #### **Online references**
 
-I've listed below all the online references used throughout this project. All the other journal paper or text book references used should be cited in the post already and listed below. 
+I've listed below all the online references used throughout this project. All the other journal paper or text book references used should be cited in the post already or listed below. 
 
--   [scikit-learn documentation](https://scikit-learn.org/stable/index.html)
+-   [scikit-learn](https://scikit-learn.org/stable/index.html)
 -   [Stack Overflow](https://stackoverflow.com)
 -   Polars references:
-    1.  [Polars - User Guide](https://pola-rs.github.io/polars-book/user-guide/introduction.html) - https://pola-rs.github.io/polars-book/user-guide/introduction.html
-    2.  [Polars documentation](https://pola-rs.github.io/polars/py-polars/html/index.html#) - https://pola-rs.github.io/polars/py-polars/html/index.html#
+    1.  [Polars - User Guide](https://docs.pola.rs/) - https://docs.pola.rs/
+    2.  [Polars API reference](https://pola-rs.github.io/polars/py-polars/html/index.html#) - https://pola-rs.github.io/polars/py-polars/html/index.html#
     3.  [Polars GitHub repository](https://github.com/pola-rs/polars) - https://github.com/pola-rs/polars

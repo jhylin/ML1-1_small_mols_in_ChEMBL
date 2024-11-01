@@ -4,7 +4,7 @@ subtitle: Series 1.1.3 - Building logistic regression model using *scikit-learn*
 author: Jennifer HY Lin
 date: '2023-1-4'
 date-modified: last-modified
-draft: true
+draft: false
 categories:
   - Machine learning projects
   - Scikit-learn
@@ -108,7 +108,7 @@ set_config(transform_output="polars")
 
 # multi_class defaults to 'auto' which selects 'ovr' if the data is binary, or if solver='liblinear'
 # multi_class is deprecated in version 1.5 and will be removed in 1.7 
-# this post uses sklearn version 1.5.2
+# this post uses sklearn version 1.5.0 (blog post version) or 1.5.2 (jupyter notebook version)
 params_lr = {
   # solver for small dataset
   "solver": "liblinear",
@@ -182,7 +182,7 @@ df_feat.plot.bar(
 )
 ```
 
-#RO5 Violations, CXLogP, HBA and HBD all have positive weights or coefficients, when the rest of the molecular features (CXLogD, heavy atoms, polar surface area and QED Weighted) all have the negative coefficients. This is likely the equivalent to using the `feature_importances_` in random forest I'm guessing. I've sorted the order of coefficients from highest to lowest in the chart.
+#RO5 Violations, CXLogP, HBA and HBD all have positive weights or coefficients, when the rest of the molecular features (CXLogD, heavy atoms, polar surface area and QED Weighted) all have the negative coefficients. This is likely the equivalent of using the `feature_importances_` in random forest I'm guessing. I've sorted the order of coefficients from highest to lowest in the chart.
 
 Another way to get features names is from the pipeline as well but requires a step saving dataframe column names separately as an NumPy array first ([scikit-learn reference](https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html#sklearn.pipeline.Pipeline.get_feature_names_out)). The previous way seems to save a bit more time on coding as there's no need to do this, and also you can retrieve the coefficients of the features at the same time. 
 
